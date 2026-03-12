@@ -46,7 +46,25 @@
 | **Plataformas Externas** | ❌ | ✅ |
 | **Integración Mundos Aliados** | ❌ | ✅ |
 | **Acceso VIP Creadores** | ❌ | ✅ |
-| **Soporte & Evolución** | Básico | Prioritario |
+---
+
+## 💎 Obtén VRCMT PREMIUM | Get VRCMT PREMIUM
+
+**ES:** ¡Desbloquea el potencial total de tu biblioteca! Al apoyarme en **Ko-fi**, obtienes acceso instantáneo a todas las funciones Premium y contenido exclusivo.
+
+**EN:** Unlock the full potential of your library! By supporting me on **Ko-fi**, you get instant access to all Premium features and exclusive content.
+
+<p align="center">
+  <a href="https://ko-fi.com/doctorlatex">
+    <img src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" width="250" alt="Support me on Ko-fi">
+  </a>
+</p>
+
+### 🚀 Pasos para Activar | How to Activate
+1. **Suscríbete o Dona** en mi página de [Ko-fi](https://ko-fi.com/doctorlatex).
+2. Asegúrate de que tu cuenta de **Discord esté vinculada a Ko-fi** para recibir tu Rol VIP automáticamente.
+3. Abre la aplicación VRCMT y **Conecta tu Discord**.
+4. ¡El sistema detectará tu rol y activará el modo Premium al instante!
 
 ---
 
