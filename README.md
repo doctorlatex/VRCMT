@@ -48,11 +48,15 @@
 | **Acceso VIP Creadores** | ❌ | ✅ |
 ---
 
-## 💎 Obtén VRCMT PREMIUM | Get VRCMT PREMIUM
+## 💎 Apoyo al Proyecto | Support the Project
 
-**ES:** ¡Desbloquea el potencial total de tu biblioteca! Al apoyarme en **Ko-fi**, obtienes acceso instantáneo a todas las funciones Premium y contenido exclusivo.
+**ES:** **¡No es obligatorio adquirir la versión Premium!** La versión gratuita es totalmente funcional y suficiente para detectar tus películas, asignarles carátulas y disfrutar de la experiencia completa de tracking. 
 
-**EN:** Unlock the full potential of your library! By supporting me on **Ko-fi**, you get instant access to all Premium features and exclusive content.
+La suscripción es exclusivamente para aquellos que deseen apoyar el desarrollo continuo del proyecto. En agradecimiento a los donadores, se desbloquean funciones adicionales y acceso exclusivo a contenido de mundos aliados como un gesto de gratitud por su generosidad.
+
+**EN:** **Premium is not required!** The free version is fully functional and more than enough to detect your movies, assign posters, and enjoy the full tracking experience.
+
+The subscription is strictly for those who wish to support the project's ongoing development. As a token of gratitude, donors receive additional features and exclusive access to partner world content.
 
 <p align="center">
   <a href="https://ko-fi.com/doctorlatex">
