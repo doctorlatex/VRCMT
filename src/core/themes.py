@@ -244,10 +244,17 @@ def get_ep_row_style(theme_name: str, is_current: bool = False) -> str:
 
 def get_ep_seen_btn_style(theme_name: str, seen: bool) -> str:
     """Estilo para el botón de visto/no-visto en filas de episodios."""
-    c = get_theme_colors(theme_name)
     if seen:
-        return "background-color: #0d3b1e; color: #27ae60; border-radius: 4px; padding: 0px; font-weight: bold;"
-    return f"background-color: {c['bg2']}; color: {c['fg2']}; border-radius: 4px; padding: 0px;"
+        return ("background: rgba(39,174,96,0.25); color: #2ecc71; border-radius: 5px; "
+                "border: 1px solid rgba(39,174,96,0.5); font-weight: bold; font-size: 13px;")
+    return ("background: rgba(255,255,255,0.05); color: #666; border-radius: 5px; "
+            "border: 1px solid rgba(255,255,255,0.08); font-size: 13px;")
+
+
+def get_ep_del_btn_style() -> str:
+    """Estilo para el botón eliminar episodio."""
+    return ("background: rgba(198,40,40,0.2); color: #ef9a9a; border-radius: 5px; "
+            "border: 1px solid rgba(198,40,40,0.35); font-size: 12px;")
 
 
 # ── Registro de temas ─────────────────────────────────────────────────────────
