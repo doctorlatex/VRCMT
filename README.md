@@ -1,86 +1,196 @@
-# 🤖 VRChat Media Tracker (VRCMT)
+# VRCMT — VRChat Media Tracker
 
-<p align="center">
-  <img src="https://public-files.gumroad.com/fu4j9v5j2ykz7u1spe9e68o1w7v8" width="400">
-</p>
+> Aplicación de escritorio para llevar el control de lo que ves en VRChat.  
+> Desktop app to keep track of what you watch in VRChat.
 
-**VRCMT** es una herramienta diseñada para crear y mantener tu propia biblioteca personal de contenido multimedia en Realidad Virtual. Rastrea, captura y comparte en tiempo real lo que estás viendo dentro de VRChat.
-
----
-
-## 🌟 Funcionalidades Principales | Core Features
-
-### 🔗 Extractor de Enlaces | Link Extractor
-- **ES:** Captura automáticamente las URLs de los reproductores en mundos de VRChat. Accede a videos de YouTube y Streams sin salir de la experiencia.
-- **EN:** Automatically captures URLs from VRChat media players. Access YouTube videos and Live Streams without leaving VR.
-
-### 🎮 Discord Rich Presence
-- **ES:** Muestra en tu perfil de Discord el mundo donde estás y el título exacto de lo que estás viendo.
-- **EN:** Displays your current world and the exact media title on your Discord profile dynamically.
-
-### 🎬 Asistente de Cine & IMDb
-- **ES:** Integración con IMDb para obtener metadatos, pósters y llevar un seguimiento de películas y series vistas (incluyendo capítulos específicos).
-- **EN:** IMDb integration to retrieve metadata, posters, and track your watched movies and TV series episodes.
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![PySide6](https://img.shields.io/badge/PySide6-6.x-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+![Tests](https://img.shields.io/badge/tests-40%20passed-brightgreen)
 
 ---
 
-## 📸 Galería | Gallery
+## ¿Qué es VRCMT? / What is VRCMT?
 
-<p align="center">
-  <img src="https://public-files.gumroad.com/j3ts4ctbc01pwmq21w2bkt1b14fg" width="200">
-  <img src="https://public-files.gumroad.com/qi8n7o3pphyqm3tqwnzti8lgkezb" width="200">
-  <img src="https://public-files.gumroad.com/df9j2pqoe56nooskjxspyo0h9rga" width="200">
-  <img src="https://public-files.gumroad.com/osyu3dcpbcm5eran64w8k7lx9z8n" width="200">
-</p>
+**ES:** VRCMT detecta automáticamente los videos que reproduces en VRChat leyendo los logs de la aplicación, los identifica usando TMDB, y los guarda en un catálogo local con estado de visto, calificaciones personales y comunitarias (Firebase), progreso por capítulos, y más.
+
+**EN:** VRCMT automatically detects videos you play in VRChat by reading the application logs, identifies them using TMDB, and saves them in a local catalog with watched status, personal and community ratings (Firebase), chapter progress, and more.
 
 ---
 
-## 💎 Modelos de Acceso | Access Tiers
+## Características / Features
 
-| Característica | Plan FREE (Gratis) | Plan PREMIUM |
-| :--- | :---: | :---: |
-| **YouTube & YT Live** | ✅ | ✅ |
-| **Twitch Streams** | ✅ | ✅ |
-| **Discord Rich Presence** | ✅ | ✅ |
-| **Servidores Directos / Archivos** | ❌ | ✅ |
-| **Plataformas Externas** | ❌ | ✅ |
-| **Integración Mundos Aliados** | ❌ | ✅ |
-| **Acceso VIP Creadores** | ❌ | ✅ |
----
-
-## 💎 Apoyo al Proyecto | Support the Project
-
-**ES:** **¡No es obligatorio adquirir la versión Premium!** La versión gratuita es totalmente funcional y suficiente para detectar tus películas, asignarles carátulas y disfrutar de la experiencia completa de tracking. 
-
-La suscripción es exclusivamente para aquellos que deseen apoyar el desarrollo continuo del proyecto. En agradecimiento a los donadores, se desbloquean funciones adicionales y acceso exclusivo a contenido de mundos aliados como un gesto de gratitud por su generosidad.
-
-**EN:** **Premium is not required!** The free version is fully functional and more than enough to detect your movies, assign posters, and enjoy the full tracking experience.
-
-The subscription is strictly for those who wish to support the project's ongoing development. As a token of gratitude, donors receive additional features and exclusive access to partner world content.
-
-<p align="center">
-  <a href="https://ko-fi.com/doctorlatex">
-    <img src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" width="250" alt="Support me on Ko-fi">
-  </a>
-</p>
-
-### 🚀 Pasos para Activar | How to Activate
-1. **Suscríbete o Dona** en mi página de [Ko-fi](https://ko-fi.com/doctorlatex).
-2. Asegúrate de que tu cuenta de **Discord esté vinculada a Ko-fi** para recibir tu Rol VIP automáticamente.
-3. Abre la aplicación VRCMT y **Conecta tu Discord**.
-4. ¡El sistema detectará tu rol y activará el modo Premium al instante!
+| Feature | Descripción / Description |
+|---------|--------------------------|
+| 🔍 Detección automática | Lee logs de VRChat en tiempo real para detectar reproducción |
+| 🎬 Catálogo | Grid / lista con póster, año, tipo y progreso |
+| ✅ Regla del 90% | Marca automáticamente como visto al llegar al 90% |
+| ⭐ Calificaciones | Personal (local) + VRCMT comunitaria (Firebase) |
+| 🗂️ Capítulos | Gestiona temporadas y episodios de series |
+| 🌍 Filtros | Por tipo, mundo, género y búsqueda de texto |
+| 🏅 Badges | Indicadores de visto / favorito en tarjetas |
+| 📊 Estadísticas | Tiempo total, géneros, actividad mensual |
+| 🔔 OTA Updates | Notificación de actualizaciones disponibles |
+| 💾 Backup | Respaldo en la nube para usuarios Premium |
+| 🎨 Temas | Dark y AMOLED |
+| 📤 Exportar | Catálogo en CSV o JSON |
+| 🖥️ System Tray | Minimiza al área de notificaciones |
 
 ---
 
-## 📜 Declaración de Autoría | AI Authorship
-> **Nota importante:** Este proyecto ha sido **desarrollado 100% mediante Inteligencia Artificial**, bajo la visión, dirección y supervisión técnica de **doctorlatex**. El código es generado íntegramente por IA (Gemini CLI), atribuyendo el mérito de programación a la misma y la autoría intelectual/dirección artística al usuario.
+## Requisitos / Requirements
+
+- **Python 3.11+** (recomendado Python 3.13)
+- **VRChat** instalado con logs habilitados (por defecto en `%LOCALAPPDATA%\..\LocalLow\VRChat\VRChat\`)
+- Cuenta de **TMDB** para metadatos (API key gratuita en [themoviedb.org](https://www.themoviedb.org/))
+- Cuenta de **Firebase** (opcional, para calificaciones comunitarias y backup Premium)
+- **Discord** instalado (opcional, para Rich Presence)
 
 ---
 
-## 🚀 Cómo empezar | Quick Start
-1. Descarga la última versión desde [Releases](https://github.com/doctorlatex/VRCMT/releases).
-2. Ejecuta el archivo portátil `VRCMT.exe`.
-3. ¡Disfruta de tu tracking en tiempo real!
+## Instalación / Installation
+
+### 1. Clonar el repositorio / Clone the repository
+
+```bash
+git clone https://github.com/doctorlatex/VRCMT.git
+cd VRCMT
+```
+
+### 2. Crear entorno virtual / Create virtual environment
+
+```bash
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# macOS / Linux
+source .venv/bin/activate
+```
+
+### 3. Instalar dependencias / Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar credenciales / Configure credentials
+
+Crea un archivo `.env` en la raíz del proyecto (o configura desde la app en **Configuración**):
+
+```env
+TMDB_API_KEY=tu_clave_tmdb
+FIREBASE_PROJECT_ID=tu_proyecto_firebase
+```
+
+> **Nota:** Las credenciales de Firebase (`serviceAccountKey.json`) deben colocarse en `assets/`.
+
+### 5. Ejecutar / Run
+
+```bash
+python main.py
+```
 
 ---
-*Developed with ❤️ by AI for the VRChat Community.*
+
+## Compilar ejecutable / Build executable
+
+```bash
+pip install pyinstaller
+pyinstaller VRCMT.spec
+```
+
+El ejecutable se generará en `dist/VRCMT.exe`.
+
+---
+
+## Tests
+
+```bash
+pip install pytest
+python -m pytest tests/ -v
+```
+
+**40 tests unitarios** cubriendo:
+- `test_scanner.py` — Detección de eventos del log de VRChat
+- `test_timer.py` — Cronómetro de reproducción y regla del 90%
+- `test_i18n.py` — Cobertura de traducciones ES/EN al 100%
+
+---
+
+## Estructura del proyecto / Project structure
+
+```
+VRCMTapp/
+├── main.py                  # Punto de entrada / Entry point
+├── VRCMT.spec               # Spec PyInstaller
+├── requirements.txt         # Dependencias
+├── assets/
+│   ├── es.json              # Traducciones español
+│   ├── en.json              # Traducciones inglés
+│   └── icon.ico             # Icono de la app
+├── src/
+│   ├── api/
+│   │   ├── discord_rpc.py   # Discord Rich Presence
+│   │   ├── firebase_client.py # Firebase/Firestore
+│   │   └── tmdb_client.py   # The Movie Database API
+│   ├── core/
+│   │   ├── engine.py        # Motor principal
+│   │   ├── scanner.py       # Lector de logs VRChat
+│   │   ├── timer.py         # Cronómetro de reproducción
+│   │   ├── config.py        # Configuración y traducciones
+│   │   ├── image_manager.py # Gestión de imágenes/pósters
+│   │   ├── backup_manager.py # Backups locales/nube
+│   │   ├── paths.py         # Rutas del sistema
+│   │   ├── themes.py        # Temas QSS
+│   │   └── version_check.py # Comprobación OTA
+│   ├── db/
+│   │   └── models.py        # Modelos Peewee (SQLite)
+│   └── ui/
+│       ├── main_window.py   # Ventana principal
+│       ├── catalog_view.py  # Vista de catálogo
+│       ├── media_modal.py   # Modal de detalle
+│       ├── settings_view.py # Configuración
+│       ├── stats_view.py    # Estadísticas
+│       ├── about_view.py    # Acerca de
+│       ├── video_player.py  # Reproductor interno
+│       ├── search_dialog.py # Búsqueda
+│       ├── image_viewer.py  # Visor de imágenes
+│       └── toast.py         # Notificaciones toast
+└── tests/
+    ├── test_scanner.py
+    ├── test_timer.py
+    └── test_i18n.py
+```
+
+---
+
+## Cómo funciona / How it works
+
+1. **VRCMT** arranca y detecta la carpeta de logs de VRChat automáticamente.
+2. El **RADAR** (scanner) monitorea los archivos `output_log_*.txt` en tiempo real.
+3. Cuando detecta una URL de video (AVProHQ, USharpVideo, iwaSync, etc.), lanza una búsqueda en TMDB.
+4. El resultado se guarda en la base de datos SQLite local.
+5. El **cronómetro** mide el tiempo de reproducción. Al alcanzar el **90%** de la duración, el contenido se marca automáticamente como visto.
+6. Si el reproductor del mundo emite `Media Ready info loaded` (ProTV), la duración exacta se captura directamente del log, sin depender de TMDB.
+
+---
+
+## Contribuir / Contributing
+
+Pull requests bienvenidos. Por favor:
+1. Haz fork del repositorio
+2. Crea una rama: `git checkout -b feature/mi-mejora`
+3. Ejecuta los tests: `python -m pytest tests/ -v`
+4. Envía tu PR
+
+---
+
+## Licencia / License
+
+MIT License — ver [LICENSE](LICENSE) para más detalles.
+
+---
+
+*Hecho con ❤️ para la comunidad de VRChat / Made with ❤️ for the VRChat community*
