@@ -1,0 +1,100 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Build / distribucion
+dist/
+build/
+*.spec.bak
+VRCMT.spec.bak
+
+# Base de datos local
+catalogo_v2.db
+*.db-shm
+*.db-wal
+
+# Backups y carpetas temporales
+backups/
+temp_*/
+_cursor_restore_*/
+_pre_restore_*/
+_backup_*/
+stub_release_template/
+stub_src/dist/
+stub_src/build/
+temp_complete/
+temp_fix_22/
+temp_popcorn/
+temp_restore/
+temp_stable_22/
+
+# Logs de debug
+debug-*.log
+debug_captures/
+crash_*.log
+collection_fix_debug.log
+live_senior_debug.log
+logic_pipeline_test.log
+media_revolution_test.log
+metadata_upgrade_test.log
+premium_lock_test.log
+proxy_debug.log
+final_*.log
+golden_logic_test.log
+output_log_*.txt
+startup_err.log
+startup_error.log
+current_log*.tmp
+errores/
+
+# Archivos de prueba / debug scripts
+honeypot_test.py
+proxy_test.py
+simulate_proxy.py
+spy.py
+play_link.py
+test_*.py
+clean_logs*.py
+extract_logs.py
+find_non_ascii.py
+debug_*.log
+extracted_urls.txt
+test_log_links_analysis_results.txt
+src/debug_ac5f85.py
+
+# Entorno
+.env
+*.env
+secrets.json
+
+# IDE / Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Pytest
+.pytest_cache/
+
+# Firebase credentials - NUNCA commitear
+cred.json
+*.json.bak
+
+# Miscellaneous
+debug-captures/
+docs/
+# Logs sueltos en raiz
+*.log
+crash_report.txt
+restore_verify*.log
+live_check*.log
+firebase_test*.log
+circuit_breaker*.log
+
+# Scripts de migracion/debug sueltos
+migrate_*.py
+rescue_db.py
+run_debug.bat

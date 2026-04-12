@@ -1,0 +1,8 @@
+{
+  "version": "1.1.0",
+  "download_url": "https://github.com/doctorlatex/VRCMT-stub/releases/download/v1.1.0/yt-dlp.exe",
+  "sha256": "0b06a78c5dc3cbad49706a49a0e004b6d26ac8b3eed0930b1cd74e0e4ae469c8",
+  "description": "VRCMT yt-dlp stub - repositorio dedicado VRCMT-stub",
+  "min_vrcmt_version": "2.0.0",
+  "manifest_repo": "https://github.com/doctorlatex/VRCMT-stub"
+}
