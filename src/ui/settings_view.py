@@ -146,85 +146,144 @@ class SettingsView(QWidget):
 
         # --- SECCIÓN: CONFIGURACIÓN GENERAL ---
         gen_card = QFrame()
-        gen_card.setStyleSheet("background-color: #1a1a1a; border-radius: 15px; padding: 20px;")
+        gen_card.setStyleSheet("background-color: #1a1a1a; border-radius: 15px; padding: 5px;")
         gen_l = QVBoxLayout(gen_card)
-        
+        gen_l.setSpacing(14)
+        gen_l.setContentsMargins(20, 20, 20, 20)
+
         gen_title = QLabel(self.engine.config.tr('lbl_gen_settings', "🛠️ Configuración General"))
-        gen_title.setStyleSheet("font-size: 18px; font-weight: bold; color: #1f6aa5;")
+        gen_title.setStyleSheet("font-size: 18px; font-weight: bold; color: #1f6aa5; margin-bottom: 4px;")
         gen_l.addWidget(gen_title)
 
-        # --- MEJORA v2.11.54: SELECTOR DE IDIOMA EXCLUYENTE ---
-        gen_l.addWidget(QLabel(self.engine.config.tr('lbl_lang_selection', "🌎 Cambiar Idioma / Change Language:")))
-        lang_row = QHBoxLayout()
+        # ── Fila 1: Idioma | Tema (lado a lado) ─────────────────────────────
+        row_top = QHBoxLayout()
+        row_top.setSpacing(16)
+
+        # Bloque Idioma
+        lang_block = QFrame()
+        lang_block.setStyleSheet("background-color: #222; border-radius: 10px; padding: 2px;")
+        lang_bk_l = QVBoxLayout(lang_block)
+        lang_bk_l.setContentsMargins(12, 10, 12, 10)
+        lang_bk_l.setSpacing(6)
+        lbl_lang = QLabel(self.engine.config.tr('lbl_lang_selection', "🌎 Idioma / Language"))
+        lbl_lang.setStyleSheet("font-size: 12px; color: #888; font-weight: bold;")
+        lang_bk_l.addWidget(lbl_lang)
+        lang_inner = QHBoxLayout()
+        lang_inner.setSpacing(8)
         self.lang_combo = QComboBox()
         self.current_app_lang = self.engine.config.get_val('language', 'Español')
-        
-        # Solo añadir el idioma que NO es el actual
         self._update_lang_options()
-        
-        self.lang_combo.setStyleSheet("background-color: #252525; padding: 8px; border-radius: 5px; color: white;")
-        
-        self.btn_apply_lang = QPushButton(self.engine.config.tr('btn_apply_lang', "Aplicar / Apply"))
-        self.btn_apply_lang.setFixedWidth(120)
-        self.btn_apply_lang.setEnabled(False) # Se habilitará al abrir el combo
-        self.btn_apply_lang.setStyleSheet("background-color: #333; color: #888; padding: 8px; border-radius: 5px;")
-        
-        lang_row.addWidget(self.lang_combo)
-        lang_row.addWidget(self.btn_apply_lang)
-        gen_l.addLayout(lang_row)
-
-        # Conectar validación y eventos (MEJORA v2.11.55: Validación Forzada)
+        self.lang_combo.setStyleSheet("background-color: #1a1a1a; padding: 7px 10px; border-radius: 7px; color: white; border: 1px solid #333;")
+        self.btn_apply_lang = QPushButton(self.engine.config.tr('btn_apply_lang', "Aplicar"))
+        self.btn_apply_lang.setFixedWidth(80)
+        self.btn_apply_lang.setEnabled(False)
+        self.btn_apply_lang.setStyleSheet(
+            "QPushButton { background-color: #333; color: #888; padding: 7px; border-radius: 7px; font-size: 12px; }"
+            "QPushButton:enabled { background-color: #1f6aa5; color: white; }"
+            "QPushButton:enabled:hover { background-color: #2980b9; }"
+        )
+        lang_inner.addWidget(self.lang_combo, 1)
+        lang_inner.addWidget(self.btn_apply_lang)
+        lang_bk_l.addLayout(lang_inner)
         self.lang_combo.currentIndexChanged.connect(self._validate_lang_change)
         self.btn_apply_lang.clicked.connect(self.on_apply_lang)
-        
-        # Forzar chequeo inicial
         self._validate_lang_change()
+        row_top.addWidget(lang_block, 1)
 
-        # Personal TMDb API Key (Senior Security: Masked internal key)
-        gen_l.addWidget(QLabel(self.engine.config.tr('lbl_tmdb_key', "🔑 Clave Personal TMDb API (Opcional):")))
-        user_api_key = self.engine.config.get_val('tmdb_api_key', '')
-        self.api_input = QLineEdit(user_api_key)
-        self.api_input.setPlaceholderText(self.engine.config.tr('placeholder_tmdb_key', "Introduce tu propia API Key si la común falla..."))
-        self.api_input.setStyleSheet("background-color: #252525; padding: 8px; border-radius: 5px;")
-        gen_l.addWidget(self.api_input)
-
-        # Log Directory
-        gen_l.addWidget(QLabel(self.engine.config.tr('lbl_log_dir', "📂 Directorio de Logs VRChat:")))
-        log_row = QHBoxLayout()
-        self.log_input = QLineEdit(self.engine.config.get_val('log_dir', ''))
-        self.log_input.setStyleSheet("background-color: #252525; padding: 8px; border-radius: 5px;")
-        btn_browse = QPushButton("📁")
-        btn_browse.setFixedSize(40, 35)
-        btn_browse.clicked.connect(self.on_browse_logs)
-        log_row.addWidget(self.log_input)
-        log_row.addWidget(btn_browse)
-        gen_l.addLayout(log_row)
-
-        # N6: Selector de tema visual
-        gen_l.addWidget(QLabel("🎨 Tema Visual:"))
-        theme_row = QHBoxLayout()
+        # Bloque Tema Visual
+        theme_block = QFrame()
+        theme_block.setStyleSheet("background-color: #222; border-radius: 10px; padding: 2px;")
+        theme_bk_l = QVBoxLayout(theme_block)
+        theme_bk_l.setContentsMargins(12, 10, 12, 10)
+        theme_bk_l.setSpacing(6)
+        lbl_theme = QLabel("🎨 " + self.engine.config.tr('lbl_theme', "Tema Visual"))
+        lbl_theme.setStyleSheet("font-size: 12px; color: #888; font-weight: bold;")
+        theme_bk_l.addWidget(lbl_theme)
+        theme_inner = QHBoxLayout()
+        theme_inner.setSpacing(8)
         self.theme_combo = QComboBox()
+        current_theme = self.engine.config.get_val('theme', 'Oscuro')
         try:
-            from src.core.themes import theme_names
+            from src.core.themes import theme_names, theme_accent
             for tn in theme_names():
                 self.theme_combo.addItem(tn)
-            current_theme = self.engine.config.get_val('theme', 'Oscuro')
             idx_t = self.theme_combo.findText(current_theme)
             if idx_t >= 0:
                 self.theme_combo.setCurrentIndex(idx_t)
         except Exception:
             self.theme_combo.addItem('Oscuro')
-        self.theme_combo.setStyleSheet("background-color: #252525; padding: 8px; border-radius: 5px; color: white;")
-        btn_apply_theme = QPushButton("Aplicar Tema")
-        btn_apply_theme.setFixedWidth(120)
-        btn_apply_theme.setStyleSheet("background-color: #1f6aa5; padding: 8px; border-radius: 5px; color: white; font-weight: bold;")
-        btn_apply_theme.clicked.connect(self._on_apply_theme)
-        theme_row.addWidget(self.theme_combo)
-        theme_row.addWidget(btn_apply_theme)
-        gen_l.addLayout(theme_row)
+        self.theme_combo.setStyleSheet("background-color: #1a1a1a; padding: 7px 10px; border-radius: 7px; color: white; border: 1px solid #333;")
 
+        # Pastilla de color del tema seleccionado
+        self._theme_dot = QLabel("●")
+        self._theme_dot.setFixedWidth(22)
+        self._theme_dot.setAlignment(Qt.AlignCenter)
+        self._theme_dot.setStyleSheet(f"font-size: 20px; color: {self.engine.config.get_val('theme_accent', '#1f6aa5')};")
+
+        def _update_theme_dot(idx):
+            name = self.theme_combo.currentText()
+            try:
+                from src.core.themes import theme_accent as _ta
+                self._theme_dot.setStyleSheet(f"font-size: 20px; color: {_ta(name)};")
+            except Exception:
+                pass
+        self.theme_combo.currentIndexChanged.connect(_update_theme_dot)
+        _update_theme_dot(self.theme_combo.currentIndex())
+
+        btn_apply_theme = QPushButton(self.engine.config.tr('btn_apply_theme', "Aplicar"))
+        btn_apply_theme.setFixedWidth(80)
+        btn_apply_theme.setStyleSheet(
+            "QPushButton { background-color: #1f6aa5; color: white; padding: 7px; border-radius: 7px; font-size: 12px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #2980b9; }"
+        )
+        btn_apply_theme.clicked.connect(self._on_apply_theme)
+        theme_inner.addWidget(self._theme_dot)
+        theme_inner.addWidget(self.theme_combo, 1)
+        theme_inner.addWidget(btn_apply_theme)
+        theme_bk_l.addLayout(theme_inner)
+        row_top.addWidget(theme_block, 1)
+
+        gen_l.addLayout(row_top)
+
+        # ── Separador ────────────────────────────────────────────────────────
+        sep = QFrame(); sep.setFrameShape(QFrame.HLine)
+        sep.setStyleSheet("background: #2a2a2a; max-height: 1px; margin: 2px 0;")
+        gen_l.addWidget(sep)
+
+        # ── Fila 2: TMDb API Key ─────────────────────────────────────────────
+        lbl_tmdb = QLabel(self.engine.config.tr('lbl_tmdb_key', "🔑 Clave Personal TMDb API (Opcional):"))
+        lbl_tmdb.setStyleSheet("font-size: 12px; color: #888; font-weight: bold;")
+        gen_l.addWidget(lbl_tmdb)
+        user_api_key = self.engine.config.get_val('tmdb_api_key', '')
+        self.api_input = QLineEdit(user_api_key)
+        self.api_input.setPlaceholderText(self.engine.config.tr('placeholder_tmdb_key', "Introduce tu propia API Key si la común falla..."))
+        self.api_input.setStyleSheet("background-color: #252525; padding: 9px 12px; border-radius: 8px; border: 1px solid #333;")
+        gen_l.addWidget(self.api_input)
+
+        # ── Fila 3: Directorio de Logs ───────────────────────────────────────
+        lbl_log = QLabel(self.engine.config.tr('lbl_log_dir', "📂 Directorio de Logs VRChat:"))
+        lbl_log.setStyleSheet("font-size: 12px; color: #888; font-weight: bold;")
+        gen_l.addWidget(lbl_log)
+        log_row = QHBoxLayout()
+        log_row.setSpacing(8)
+        self.log_input = QLineEdit(self.engine.config.get_val('log_dir', ''))
+        self.log_input.setStyleSheet("background-color: #252525; padding: 9px 12px; border-radius: 8px; border: 1px solid #333;")
+        btn_browse = QPushButton("📁")
+        btn_browse.setFixedSize(42, 38)
+        btn_browse.setStyleSheet("background-color: #333; border-radius: 8px; font-size: 16px; padding: 0;")
+        btn_browse.setToolTip("Seleccionar carpeta")
+        btn_browse.clicked.connect(self.on_browse_logs)
+        log_row.addWidget(self.log_input)
+        log_row.addWidget(btn_browse)
+        gen_l.addLayout(log_row)
+
+        # ── Botón guardar ────────────────────────────────────────────────────
         btn_save_gen = QPushButton(self.engine.config.tr('btn_save_settings', "💾 Guardar Configuración"))
-        btn_save_gen.setStyleSheet("background-color: #1f6aa5; padding: 10px; font-weight: bold; margin-top: 10px;")
+        btn_save_gen.setMinimumHeight(42)
+        btn_save_gen.setStyleSheet(
+            "QPushButton { background-color: #1f6aa5; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 14px; }"
+            "QPushButton:hover { background-color: #2980b9; }"
+        )
         btn_save_gen.clicked.connect(self.on_save_general)
         gen_l.addWidget(btn_save_gen)
 
@@ -1008,10 +1067,12 @@ class SettingsView(QWidget):
     def _on_apply_theme(self):
         """N6: Aplica el tema seleccionado en tiempo real."""
         try:
-            from src.core.themes import get_theme
+            from src.core.themes import get_theme, theme_accent
             from PySide6.QtWidgets import QApplication
             theme_name = self.theme_combo.currentText()
             self.engine.config.save_config('theme', theme_name)
+            accent = theme_accent(theme_name)
+            self.engine.config.save_config('theme_accent', accent)
             qss = get_theme(theme_name)
             QApplication.instance().setStyleSheet(qss)
             logging.info("Tema aplicado: %s", theme_name)
