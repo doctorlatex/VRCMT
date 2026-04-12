@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QThreadPool, QRunnable, QObject
 
-APP_VERSION   = "2.0.6"
+APP_VERSION   = "2.0.7"
 APP_NAME      = "VRCMT — VRChat Media Tracker"
 APP_AUTHOR    = "DoctorLatex"
 APP_CONTACT   = "Discord: DoctorLatex"
