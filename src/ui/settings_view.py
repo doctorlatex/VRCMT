@@ -907,12 +907,16 @@ class SettingsView(QWidget):
 
     def on_stub_update_manifest(self):
         self._persist_stub_fields_from_ui()
-        # Marcar botón como ocupado
+        # Marcar botón como ocupado / Mark button as busy
         if hasattr(self, 'btn_stub_install_main') and shiboken.isValid(self.btn_stub_install_main):
             self.btn_stub_install_main.setEnabled(False)
             self.btn_stub_install_main.setText("⏳  Descargando…")
 
         def done(ok, msg):
+            # Guardia de validez: el usuario pudo navegar lejos mientras descargaba
+            # Validity guard: user might have navigated away while downloading
+            if not shiboken.isValid(self):
+                return
             if hasattr(self, 'btn_stub_install_main') and shiboken.isValid(self.btn_stub_install_main):
                 self.btn_stub_install_main.setEnabled(True)
                 self.btn_stub_install_main.setText(
@@ -922,7 +926,7 @@ class SettingsView(QWidget):
                 QMessageBox.information(
                     self,
                     self.engine.config.tr("lbl_success", "✅ Listo"),
-                    self.engine.config.tr("msg_stub_installed", msg or "Stub instalado correctamente."),
+                    msg or self.engine.config.tr("msg_stub_installed", "Stub instalado correctamente."),
                 )
             else:
                 QMessageBox.warning(
@@ -931,12 +935,18 @@ class SettingsView(QWidget):
                     msg,
                 )
             self.on_stub_refresh_status()
+            # Liberar referencia al worker una vez completado / Release worker reference once done
+            self._stub_manifest_worker = None
 
-        w = StubManifestWorker(self.engine, force=False)
+        # Guardar referencia fuerte al worker para evitar que Python lo recolecte
+        # antes de que el hilo termine y emita la señal.
+        # Keep strong reference to worker to prevent Python from garbage-collecting
+        # it before the thread finishes and emits the signal.
+        self._stub_manifest_worker = StubManifestWorker(self.engine, force=False)
         # QueuedConnection: el slot 'done' corre en el hilo GUI, no en el worker
         # QueuedConnection: 'done' slot runs on GUI thread, not worker thread
-        w.signals.finished.connect(done, Qt.ConnectionType.QueuedConnection)
-        QThreadPool.globalInstance().start(w)
+        self._stub_manifest_worker.signals.finished.connect(done, Qt.ConnectionType.QueuedConnection)
+        QThreadPool.globalInstance().start(self._stub_manifest_worker)
 
     def on_stub_install_file(self):
         self._persist_stub_fields_from_ui()
@@ -950,15 +960,18 @@ class SettingsView(QWidget):
             return
 
         def done(ok, msg):
+            if not shiboken.isValid(self):
+                return
             if ok:
                 QMessageBox.information(self, self.engine.config.tr("lbl_success", "Listo"), msg)
             else:
                 QMessageBox.warning(self, self.engine.config.tr("lbl_error", "No se pudo completar"), msg)
             self.on_stub_refresh_status()
+            self._stub_file_worker = None
 
-        w = StubInstallFileWorker(self.engine, path)
-        w.signals.finished.connect(done, Qt.ConnectionType.QueuedConnection)
-        QThreadPool.globalInstance().start(w)
+        self._stub_file_worker = StubInstallFileWorker(self.engine, path)
+        self._stub_file_worker.signals.finished.connect(done, Qt.ConnectionType.QueuedConnection)
+        QThreadPool.globalInstance().start(self._stub_file_worker)
 
     def on_stub_restore(self):
         self._persist_stub_fields_from_ui()

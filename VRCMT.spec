@@ -6,6 +6,7 @@ added_files = [
     ("assets", "assets"),
     ("src", "src"),
     ("cred.json", "."),
+    ("logo_tracker.ico", "."),
     (os.path.join(PYTHON_SITE, "babelfish", "data"), "babelfish/data"),
     (os.path.join(PYTHON_SITE, "babelfish", "converters"), "babelfish/converters"),
     (os.path.join(PYTHON_SITE, "guessit", "data"), "guessit/data"),

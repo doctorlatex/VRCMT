@@ -70,8 +70,37 @@ def _global_excepthook(exc_type, exc, tb):
 sys.excepthook = _global_excepthook
 
 
+def _resolve_icon_path() -> str:
+    """Resuelve la ruta del ícono tanto en modo script como en ejecutable PyInstaller.
+    Resolves icon path both in script mode and as a PyInstaller executable."""
+    candidates = []
+    # Cuando se ejecuta como exe PyInstaller (MEIPASS = directorio temporal con datos)
+    # When running as PyInstaller exe (MEIPASS = temporary directory with data files)
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        candidates.append(os.path.join(sys._MEIPASS, 'logo_tracker.ico'))
+    # Cuando se ejecuta como script Python
+    # When running as Python script
+    candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logo_tracker.ico'))
+    candidates.append(os.path.join(os.path.abspath('.'), 'logo_tracker.ico'))
+    for p in candidates:
+        if os.path.isfile(p):
+            return p
+    return ""
+
+
 def main():
     logging.info("🏁 Iniciando VRCMT v2.0 - Next Generation")
+
+    # Establecer AppUserModelID para que Windows muestre el ícono correcto en la barra de tareas
+    # (Debe llamarse ANTES de crear QApplication)
+    # Set AppUserModelID so Windows shows the correct icon in the taskbar
+    # (Must be called BEFORE creating QApplication)
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            "VRCMT.VRChatMediaTracker.App.2"
+        )
+    except Exception:
+        pass
     
     # 1. Inicializar la Interfaz Gráfica (Debe ser lo primero)
     from PySide6.QtCore import Qt
@@ -92,6 +121,19 @@ def main():
     _tp.setMaxThreadCount(max(2, min(4, _tp.maxThreadCount())))
     
     app.setStyle("Fusion")
+
+    # Ícono de la aplicación en ventana y barra de tareas de Windows
+    # Application icon for window title bar and Windows taskbar
+    try:
+        from PySide6.QtGui import QIcon
+        _icon_path = _resolve_icon_path()
+        if _icon_path:
+            app.setWindowIcon(QIcon(_icon_path))
+            logging.debug("Ícono de app cargado desde: %s", _icon_path)
+        else:
+            logging.debug("logo_tracker.ico no encontrado; se usará ícono genérico.")
+    except Exception as _ie:
+        logging.debug("No se pudo aplicar ícono de app: %s", _ie)
 
     # N6: Aplicar tema desde configuración
     try:

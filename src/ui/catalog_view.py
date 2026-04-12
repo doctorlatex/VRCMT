@@ -541,13 +541,38 @@ class CatalogView(QScrollArea):
         # Ajustar spacing del grid según el modo
         self.grid.setSpacing(15 if mode == 'grid' else 6)
 
-    def _fetch_thumb_qt(self, url: str, kid: str, seq: int):
-        """Descarga de imagen en hilo GUI (QtNetwork) para evitar SSL en hilos Python."""
+    # Resoluciones de miniaturas de YouTube en orden de preferencia
+    # YouTube thumbnail resolutions in order of preference
+    _YT_THUMB_FALLBACKS = ["maxresdefault", "hqdefault", "mqdefault", "sddefault", "default"]
+
+    def _youtube_thumb_fallbacks(self, url: str):
+        """Devuelve lista de URLs de miniatura de YouTube a probar, de mayor a menor calidad.
+        Returns list of YouTube thumbnail URLs to try, from best to lowest quality."""
+        import re as _re
+        m = _re.search(r"img\.youtube\.com/vi/([A-Za-z0-9_-]{11})/(\w+)\.jpg", url)
+        if not m:
+            return [url]
+        vid = m.group(1)
+        return [f"https://img.youtube.com/vi/{vid}/{res}.jpg" for res in self._YT_THUMB_FALLBACKS]
+
+    def _fetch_thumb_qt(self, url: str, kid: str, seq: int, _fallback_urls=None):
+        """Descarga de imagen en hilo GUI (QtNetwork) para evitar SSL en hilos Python.
+        Con soporte de fallback para miniaturas de YouTube que devuelven 404.
+        Download image in GUI thread (QtNetwork) to avoid SSL in Python threads.
+        With fallback support for YouTube thumbnails that return 404."""
         if not shiboken.isValid(self):
             return
         if not url:
             self._apply_card_thumb(kid, QByteArray(), seq)
             return
+
+        # Preparar lista de URLs de fallback para YouTube
+        # Prepare fallback URL list for YouTube
+        if _fallback_urls is None:
+            _fallback_urls = self._youtube_thumb_fallbacks(url)
+            if url in _fallback_urls:
+                _fallback_urls = _fallback_urls[_fallback_urls.index(url):]
+
         qurl = QUrl(url)
         req = QNetworkRequest(qurl)
         req.setRawHeader(b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
@@ -558,7 +583,17 @@ class CatalogView(QScrollArea):
             try:
                 if self._poster_load_seq.get(kid, 0) != seq:
                     return
+                http_code = reply.attribute(
+                    QNetworkRequest.Attribute.HttpStatusCodeAttribute
+                )
                 raw = reply.readAll()
+                # Si la respuesta es 404 o vacía y hay URLs de fallback, intentar la siguiente
+                # If response is 404 or empty and there are fallback URLs, try next
+                if (not raw or (http_code and int(http_code) >= 400)) and len(_fallback_urls) > 1:
+                    next_urls = _fallback_urls[1:]
+                    if shiboken.isValid(self):
+                        self._fetch_thumb_qt(next_urls[0], kid, seq, next_urls)
+                    return
                 self._apply_card_thumb(kid, raw, seq)
             finally:
                 try:
@@ -631,12 +666,16 @@ class CatalogView(QScrollArea):
         def process_items():
             if not shiboken.isValid(self): return
 
-            # F2: Batch query de progreso de episodios para series/anime
-            # F2: Batch query for episode progress on series/anime items
+            # F2: Batch query de progreso de episodios para series/anime.
+            # Deduplicamos por pares (temporada, episodio) únicos para que variantes del mismo
+            # capítulo (múltiples links) cuenten como UN solo episodio.
+            # F2: Batch query for episode progress on series/anime items.
+            # Deduplicate by unique (season, episode) pairs so that variants of the same
+            # episode (multiple links) count as ONE single episode.
             _progress_map = {}
             try:
                 from src.db.models import Multimedia as _MM
-                from peewee import fn as _fn
+                from collections import defaultdict as _defaultdict
                 serie_titles = list({
                     it.titulo for it in items
                     if getattr(it, 'tipo_contenido', '') in ('Serie',) or getattr(it, 'es_anime', 0)
@@ -644,16 +683,27 @@ class CatalogView(QScrollArea):
                 if serie_titles:
                     rows = (
                         _MM.select(
-                            _MM.titulo,
-                            _fn.COUNT(_MM.id).alias('total'),
-                            _fn.SUM(_MM.estado_visto).alias('seen'),
+                            _MM.titulo, _MM.temporada, _MM.episodio, _MM.estado_visto
                         )
-                        .where(_MM.titulo.in_(serie_titles))
-                        .group_by(_MM.titulo)
+                        .where(
+                            _MM.titulo.in_(serie_titles)
+                            & (_MM.tipo_contenido == 'Serie')
+                        )
                     )
+                    # Agregar en Python: cada par (temporada, episodio) = 1 capítulo.
+                    # Un capítulo se considera visto si AL MENOS UNA variante está vista.
+                    # Aggregate in Python: each (season, episode) pair = 1 chapter.
+                    # A chapter is seen if AT LEAST ONE variant is seen.
+                    _seen_keys = _defaultdict(set)
+                    _total_keys = _defaultdict(set)
+                    for r in rows:
+                        _ep_key = (str(r.temporada or ''), str(r.episodio or ''))
+                        _total_keys[r.titulo].add(_ep_key)
+                        if r.estado_visto:
+                            _seen_keys[r.titulo].add(_ep_key)
                     _progress_map = {
-                        r.titulo: (int(r.seen or 0), int(r.total or 0))
-                        for r in rows
+                        t: (len(_seen_keys[t]), len(_total_keys[t]))
+                        for t in _total_keys
                     }
             except Exception as _pe:
                 logging.debug("F2 progress batch: %s", _pe)
@@ -699,9 +749,13 @@ class CatalogView(QScrollArea):
                             loader.signals.finished.connect(bridge.on_finished)
                             QThreadPool.globalInstance().start(loader)
 
-                    # F2: Aplicar barra de progreso si hay datos de episodios
-                    # F2: Apply progress bar if episode data is available
-                    if _progress_map and item.titulo in _progress_map:
+                    # F2: Aplicar barra de progreso SOLO para Series/Anime (nunca para Películas).
+                    # Para series, los links duplicados ya están deduplicados antes de este punto.
+                    # F2: Apply progress bar ONLY for Series/Anime (never for Movies).
+                    # For series, duplicate links are already deduplicated before this point.
+                    _item_tipo = getattr(item, 'tipo_contenido', '')
+                    _item_is_serie = _item_tipo in ('Serie',) or getattr(item, 'es_anime', 0)
+                    if _progress_map and item.titulo in _progress_map and _item_is_serie:
                         seen_c, total_c = _progress_map[item.titulo]
                         if total_c > 1 and hasattr(card, 'set_series_progress'):
                             card.set_series_progress(seen_c, total_c)

@@ -119,6 +119,24 @@ class MainWindow(QMainWindow):
         # 1150px garantiza que las 5 columnas entren con total comodidad
         self.resize(1150, 900)
 
+        # Ícono de ventana (barra de título y barra de tareas de Windows)
+        # Window icon (title bar and Windows taskbar)
+        try:
+            import sys as _sys
+            from PySide6.QtGui import QIcon as _QIcon
+            _candidates = []
+            if getattr(_sys, 'frozen', False) and hasattr(_sys, '_MEIPASS'):
+                _candidates.append(os.path.join(_sys._MEIPASS, 'logo_tracker.ico'))
+            _candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'logo_tracker.ico'))
+            _candidates.append(os.path.join(os.path.abspath('.'), 'logo_tracker.ico'))
+            for _cp in _candidates:
+                _cp = os.path.normpath(_cp)
+                if os.path.isfile(_cp):
+                    self.setWindowIcon(_QIcon(_cp))
+                    break
+        except Exception:
+            pass
+
         self.current_filter = "Todo"
         self.current_sort = self.engine.config.get_val("sort_order", "added_recent_desc")
         self._view_mode = 'grid'          # N2: modo de vista del catálogo

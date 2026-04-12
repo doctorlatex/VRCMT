@@ -2061,14 +2061,30 @@ class MediaModal(QFrame):
                 Multimedia.ultima_actualizacion.desc()
             ).limit(500))
 
-            # Deduplicar por (temporada, episodio) — keep most-recent
-            _seen_ep_keys = set()
-            _deduped = []
-            for _ep in all_eps:
-                _key = (str(_ep.temporada), str(_ep.episodio))
-                if _key not in _seen_ep_keys:
-                    _seen_ep_keys.add(_key)
-                    _deduped.append(_ep)
+            # Para películas: múltiples links son VARIANTES de la misma película, no capítulos.
+            # Deduplicar todos a UN solo ítem (el más reciente). No se deben contar como episodios.
+            # For movies: multiple links are VARIANTS of the same movie, not chapters.
+            # Deduplicate all to ONE item (most recent). They must not be counted as episodes.
+            is_movie = getattr(self.item, 'tipo_contenido', '') == 'Pelicula'
+            if is_movie:
+                # Todas las variantes de una película = 1 sola entrada en la lista
+                # All movie variants = 1 single entry in the list
+                _deduped = all_eps[:1] if all_eps else []
+                # Si alguna variante está marcada como vista, usar esa
+                # If any variant is marked as seen, use that one
+                seen_variants = [e for e in all_eps if getattr(e, 'estado_visto', 0) == 1]
+                if seen_variants:
+                    _deduped = seen_variants[:1]
+            else:
+                # Deduplicar por (temporada, episodio) — keep most-recent
+                # Deduplicate by (season, episode) — keep most-recent
+                _seen_ep_keys = set()
+                _deduped = []
+                for _ep in all_eps:
+                    _key = (str(_ep.temporada), str(_ep.episodio))
+                    if _key not in _seen_ep_keys:
+                        _seen_ep_keys.add(_key)
+                        _deduped.append(_ep)
 
             # Reordenar el resultado final por temporada / episodio para el display
             eps = sorted(_deduped, key=lambda e: (str(e.temporada), str(e.episodio)))

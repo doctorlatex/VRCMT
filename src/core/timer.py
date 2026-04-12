@@ -131,6 +131,29 @@ class PlaybackTimer:
                         "✅ Regla del 90%% alcanzada (%.1f%% respecto a duración en catálogo). Marcando como visto.",
                         ratio * 100,
                     )
+                    # Para películas: marcar TODAS las variantes (links) de esa película como vistas.
+                    # Una película con múltiples links son variantes de la misma película.
+                    # For movies: mark ALL variants (links) of that movie as seen.
+                    # A movie with multiple links are variants of the same movie.
+                    if getattr(item, 'tipo_contenido', '') == 'Pelicula' and item.titulo:
+                        try:
+                            n = (
+                                Multimedia.update(estado_visto=1)
+                                .where(
+                                    (Multimedia.titulo == item.titulo)
+                                    & (Multimedia.tipo_contenido == 'Pelicula')
+                                    & (Multimedia.estado_visto == 0)
+                                )
+                                .execute()
+                            )
+                            if n > 0:
+                                logging.info(
+                                    "✅ %d variante(s) de la película '%s' marcadas como vistas. "
+                                    "[%d movie variant(s) marked as seen.]",
+                                    n, (item.titulo or "")[:60], n,
+                                )
+                        except Exception as _e:
+                            logging.debug("movie variants mark-seen: %s", _e)
             item.save()
             logging.debug(f"💾 Progreso guardado: {item.minuto_actual:.2f} min totales.")
         except Exception as e:
