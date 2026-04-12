@@ -322,6 +322,26 @@ class SettingsView(QWidget):
         )
         stub_l.addWidget(self.stub_chk_enabled)
 
+        # Casilla: restaurar al cerrar — visible junto a la opción principal para mayor claridad
+        # Restore on exit checkbox — shown next to main option for better visibility
+        self.stub_chk_restore_exit = QCheckBox(
+            _tr(
+                "lbl_stub_restore_exit",
+                "Quitar la mejora automáticamente al cerrar VRCMT",
+            )
+        )
+        self.stub_chk_restore_exit.setChecked(
+            bool(self.engine.config.get_val("vrchat_stub_restore_on_exit", False))
+        )
+        self.stub_chk_restore_exit.setStyleSheet("color: #aaa; font-size: 13px;")
+        self.stub_chk_restore_exit.setToolTip(
+            _tr(
+                "stub_tip_restore_exit",
+                "Si está marcado, al cerrar VRCMT se restaurará el yt-dlp original de VRChat automáticamente.",
+            )
+        )
+        stub_l.addWidget(self.stub_chk_restore_exit)
+
         # ── Botón principal: Instalar / Actualizar ──────────────────────────
         self.btn_stub_install_main = QPushButton(
             _tr("btn_stub_update_manifest", "⬇️  Instalar / Actualizar desde internet")
@@ -439,25 +459,6 @@ class SettingsView(QWidget):
         cookies_row.addWidget(self.stub_cookies_input, 1)
         cookies_row.addWidget(btn_stub_cookies)
         adv_l.addLayout(cookies_row)
-
-        # Casilla: restaurar al cerrar
-        self.stub_chk_restore_exit = QCheckBox(
-            _tr(
-                "lbl_stub_restore_exit",
-                "Quitar la mejora automáticamente al cerrar VRCMT",
-            )
-        )
-        self.stub_chk_restore_exit.setChecked(
-            bool(self.engine.config.get_val("vrchat_stub_restore_on_exit", False))
-        )
-        self.stub_chk_restore_exit.setStyleSheet("color: #aaa; font-size: 13px;")
-        self.stub_chk_restore_exit.setToolTip(
-            _tr(
-                "stub_tip_restore_exit",
-                "Si está marcado, al cerrar VRCMT se restaurará el yt-dlp original de VRChat automáticamente.",
-            )
-        )
-        adv_l.addWidget(self.stub_chk_restore_exit)
 
         # URL del manifest — se muestra vacío por defecto; la URL real se usa internamente.
         # Manifest URL — shown empty by default; the real URL is used internally.
