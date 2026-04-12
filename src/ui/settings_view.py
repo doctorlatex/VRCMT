@@ -223,16 +223,6 @@ class SettingsView(QWidget):
         theme_row.addWidget(btn_apply_theme)
         gen_l.addLayout(theme_row)
 
-        # P4: URL del servidor OTA / OTA update server URL (configurable)
-        gen_l.addWidget(QLabel(self.engine.config.tr('lbl_ota_url', "🔗 URL de actualizaciones OTA (opcional):")))
-        self.ota_url_input = QLineEdit(self.engine.config.get_val('ota_url', ''))
-        self.ota_url_input.setPlaceholderText(
-            self.engine.config.tr('placeholder_ota_url',
-                "https://raw.githubusercontent.com/tu-usuario/VRCMT/main/version.txt")
-        )
-        self.ota_url_input.setStyleSheet("background-color: #252525; padding: 8px; border-radius: 5px;")
-        gen_l.addWidget(self.ota_url_input)
-
         btn_save_gen = QPushButton(self.engine.config.tr('btn_save_settings', "💾 Guardar Configuración"))
         btn_save_gen.setStyleSheet("background-color: #1f6aa5; padding: 10px; font-weight: bold; margin-top: 10px;")
         btn_save_gen.clicked.connect(self.on_save_general)
@@ -1027,9 +1017,8 @@ class SettingsView(QWidget):
         self.engine.config.save_config('tmdb_api_key', self.api_input.text().strip())
         self.engine.config.save_config('log_dir', self.log_input.text().strip())
         # P4: Guardar URL OTA si fue modificada / Save OTA URL if changed
-        if hasattr(self, 'ota_url_input'):
-            ota_val = self.ota_url_input.text().strip()
-            self.engine.config.save_config('ota_url', ota_val)
+        # ota_url eliminado de UI — la URL se gestiona internamente en version_check.py
+        # ota_url removed from UI — URL is managed internally in version_check.py
         
         QMessageBox.information(
             self,
