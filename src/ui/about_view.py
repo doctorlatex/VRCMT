@@ -1,16 +1,17 @@
 import webbrowser
+import logging
 from PySide6.QtWidgets import (
     QWidget, QFrame, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QScrollArea, QSizePolicy
+    QPushButton, QScrollArea, QSizePolicy, QProgressBar, QMessageBox
 )
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, Signal, QThreadPool, QRunnable, QObject
 
-APP_VERSION   = "4.7"
+APP_VERSION   = "2.0.6"
 APP_NAME      = "VRCMT — VRChat Media Tracker"
 APP_AUTHOR    = "DoctorLatex"
 APP_CONTACT   = "Discord: DoctorLatex"
 DISCORD_INVITE = "https://discord.gg/enKmpDQwY3"
+GITHUB_RELEASES = "https://github.com/doctorlatex/VRCMT/releases/latest"
 
 # ---------------------------------------------------------------------------
 # Modal de instrucciones
@@ -229,6 +230,7 @@ class AboutView(QWidget):
     def __init__(self, engine, parent=None):
         super().__init__(parent)
         self.engine = engine
+        self._pending_version = ""
         self._build_ui()
 
     def _build_ui(self):
@@ -330,7 +332,75 @@ class AboutView(QWidget):
         sep3.setStyleSheet("color: #222; background: #222; max-height: 1px;")
         card_l.addWidget(sep3)
 
-        # Fila de botones: Instrucciones | Discord
+        # ── Banner de actualización disponible (oculto por defecto) ──────────
+        self._update_banner = QFrame()
+        self._update_banner.setStyleSheet(
+            "background-color: #1b3a1b; border-radius: 10px; border: 1px solid #2e7d32; padding: 2px;"
+        )
+        update_banner_l = QVBoxLayout(self._update_banner)
+        update_banner_l.setContentsMargins(14, 10, 14, 10)
+        update_banner_l.setSpacing(8)
+
+        self._lbl_update_title = QLabel("🆕 Nueva versión disponible")
+        self._lbl_update_title.setStyleSheet("color: #81c784; font-size: 14px; font-weight: bold;")
+        update_banner_l.addWidget(self._lbl_update_title)
+
+        self._lbl_update_desc = QLabel(
+            "Haz clic en «Instalar actualización» para descargar e instalar automáticamente.\n"
+            "La app se cerrará, se actualizará y volverá a abrirse sola."
+        )
+        self._lbl_update_desc.setWordWrap(True)
+        self._lbl_update_desc.setStyleSheet("color: #aaa; font-size: 12px;")
+        update_banner_l.addWidget(self._lbl_update_desc)
+
+        self._update_progress = QProgressBar()
+        self._update_progress.setRange(0, 100)
+        self._update_progress.setValue(0)
+        self._update_progress.setFixedHeight(8)
+        self._update_progress.setStyleSheet(
+            "QProgressBar { border-radius: 4px; background: #333; }"
+            "QProgressBar::chunk { background: #4caf50; border-radius: 4px; }"
+        )
+        self._update_progress.setVisible(False)
+        update_banner_l.addWidget(self._update_progress)
+
+        update_btn_row = QHBoxLayout()
+        self._btn_install_update = QPushButton("⬇️  Instalar actualización")
+        self._btn_install_update.setFixedHeight(40)
+        self._btn_install_update.setCursor(Qt.PointingHandCursor)
+        self._btn_install_update.setStyleSheet("""
+            QPushButton {
+                background-color: #2e7d32; color: #fff;
+                border-radius: 8px; font-size: 13px; font-weight: bold;
+                border: none; padding: 0 18px;
+            }
+            QPushButton:hover   { background-color: #388e3c; }
+            QPushButton:pressed { background-color: #1b5e20; }
+            QPushButton:disabled { background-color: #333; color: #666; }
+        """)
+        self._btn_install_update.clicked.connect(self._on_install_update)
+
+        btn_github = QPushButton("🌐  Ver en GitHub")
+        btn_github.setFixedHeight(40)
+        btn_github.setCursor(Qt.PointingHandCursor)
+        btn_github.setStyleSheet("""
+            QPushButton {
+                background-color: #333; color: #ccc;
+                border-radius: 8px; font-size: 13px;
+                border: none; padding: 0 14px;
+            }
+            QPushButton:hover { background-color: #444; }
+        """)
+        btn_github.clicked.connect(lambda: webbrowser.open(GITHUB_RELEASES))
+
+        update_btn_row.addWidget(self._btn_install_update, 1)
+        update_btn_row.addWidget(btn_github)
+        update_banner_l.addLayout(update_btn_row)
+
+        self._update_banner.setVisible(False)
+        card_l.addWidget(self._update_banner)
+
+        # ── Fila de botones: Instrucciones | Discord ─────────────────────────
         btn_row = QHBoxLayout()
         btn_row.setSpacing(12)
 
@@ -339,13 +409,9 @@ class AboutView(QWidget):
         btn_instr.setCursor(Qt.PointingHandCursor)
         btn_instr.setStyleSheet("""
             QPushButton {
-                background-color: #1f6aa5;
-                color: #fff;
-                border-radius: 10px;
-                font-size: 14px;
-                font-weight: bold;
-                border: none;
-                padding: 0 20px;
+                background-color: #1f6aa5; color: #fff;
+                border-radius: 10px; font-size: 14px; font-weight: bold;
+                border: none; padding: 0 20px;
             }
             QPushButton:hover   { background-color: #2980b9; }
             QPushButton:pressed { background-color: #1a5276; }
@@ -358,16 +424,12 @@ class AboutView(QWidget):
         btn_discord.setToolTip(DISCORD_INVITE)
         btn_discord.setStyleSheet("""
             QPushButton {
-                background-color: #23a55a;
-                color: #fff;
-                border-radius: 10px;
-                font-size: 14px;
-                font-weight: bold;
-                border: none;
-                padding: 0 20px;
+                background-color: #5865f2; color: #fff;
+                border-radius: 10px; font-size: 14px; font-weight: bold;
+                border: none; padding: 0 20px;
             }
-            QPushButton:hover   { background-color: #2dc76d; }
-            QPushButton:pressed { background-color: #1a8f47; }
+            QPushButton:hover   { background-color: #6b77f5; }
+            QPushButton:pressed { background-color: #4752c4; }
         """)
         btn_discord.clicked.connect(lambda: webbrowser.open(DISCORD_INVITE))
 
@@ -377,3 +439,53 @@ class AboutView(QWidget):
 
         root.addWidget(card)
         root.addStretch()
+
+    # ── API pública ──────────────────────────────────────────────────────────
+
+    def notify_update(self, version: str) -> None:
+        """Llamado desde MainWindow cuando el OTA detecta una nueva versión."""
+        self._pending_version = version
+        self._lbl_update_title.setText(f"🆕 Nueva versión disponible: v{version}")
+        self._update_banner.setVisible(True)
+
+    def _on_install_update(self) -> None:
+        from src.core.self_updater import download_update, apply_update_and_restart
+        import sys
+
+        if not getattr(sys, "frozen", False):
+            QMessageBox.information(
+                self, "Solo en .exe",
+                "La actualización automática solo está disponible en el ejecutable .exe.\n"
+                "En modo desarrollo, descarga manualmente desde GitHub."
+            )
+            webbrowser.open(GITHUB_RELEASES)
+            return
+
+        self._btn_install_update.setEnabled(False)
+        self._btn_install_update.setText("⏳  Descargando...")
+        self._update_progress.setVisible(True)
+        self._update_progress.setValue(0)
+
+        def on_progress(downloaded: int, total: int) -> None:
+            if total > 0:
+                pct = int(downloaded * 100 / total)
+                self._update_progress.setValue(pct)
+                mb = downloaded / 1_048_576
+                self._btn_install_update.setText(f"⏳  Descargando… {mb:.0f} MB")
+
+        def on_done(ok: bool, msg: str) -> None:
+            if ok:
+                self._btn_install_update.setText("✅  Instalando y reiniciando…")
+                apply_update_and_restart(msg)
+            else:
+                self._btn_install_update.setEnabled(True)
+                self._btn_install_update.setText("⬇️  Instalar actualización")
+                self._update_progress.setVisible(False)
+                QMessageBox.warning(
+                    self, "Error de descarga",
+                    f"No se pudo descargar la actualización:\n{msg}\n\n"
+                    "Puedes descargarla manualmente desde GitHub."
+                )
+                webbrowser.open(GITHUB_RELEASES)
+
+        download_update(on_progress=on_progress, on_done=on_done)

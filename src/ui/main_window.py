@@ -836,10 +836,14 @@ class MainWindow(QMainWindow):
         try:
             if not shiboken.isValid(self):
                 return
+            self._pending_update_version = version
             self.show_toast(
-                f"Nueva versión disponible: v{version} — descarga en discord.gg/enKmpDQwY3",
-                kind='success', duration=8000,
+                f"🆕 Nueva versión disponible: v{version} — ve a «Acerca de» para actualizar",
+                kind='success', duration=10000,
             )
+            # Activar boton de descarga en AboutView
+            if hasattr(self, 'about_view'):
+                self.about_view.notify_update(version)
         except Exception as e:
             logging.debug("_show_update_banner: %s", e)
 

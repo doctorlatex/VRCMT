@@ -1,8 +1,8 @@
 import threading
 import logging
 
-CURRENT_VERSION = "2.0.5"
-_DEFAULT_VERSION_URL = "https://raw.githubusercontent.com/doctorlatex/VRCMT/master/OneDrive/Escritorio/ProyectosIA/VRCMT/VRCMTapp/version.txt"
+CURRENT_VERSION = "2.0.6"
+_DEFAULT_VERSION_URL = "https://raw.githubusercontent.com/doctorlatex/VRCMT/master/version.txt"
 
 
 def _version_tuple(v):
