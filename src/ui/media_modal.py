@@ -1963,7 +1963,7 @@ class MediaModal(QFrame):
                 btn_copy.setVisible(True)
                 try:
                     btn_play.clicked.disconnect()
-                except TypeError:
+                except (TypeError, RuntimeError):
                     pass
                 btn_play.clicked.connect(lambda chk, _u=ver.url, _t=self.item.titulo: self._play_video(_u, _t))
             else:

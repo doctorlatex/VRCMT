@@ -321,6 +321,9 @@ class MainWindow(QMainWindow):
             btn.setCheckable(True)
             if self._sidebar_collapsed:
                 btn.setToolTip(label)
+                # Aplicar estilo compacto desde el inicio si ya inicia colapsado
+                # Apply compact style from start if sidebar starts collapsed
+                btn.setStyleSheet(self._NAV_BTN_COMPACT_STYLE)
             btn.clicked.connect(lambda checked, k=key: self.change_filter(k))
             sidebar_layout.addWidget(btn)
             self.nav_group.append(btn)
@@ -336,6 +339,10 @@ class MainWindow(QMainWindow):
         self._sidebar_toggle_btn.setToolTip(
             self.engine.config.tr('btn_collapse_sidebar', 'Colapsar / Collapse sidebar')
         )
+        if self._sidebar_collapsed:
+            self._sidebar_toggle_btn.setStyleSheet(
+                "QPushButton#NavButton { text-align: center; padding: 6px 0px; margin: 4px 4px; }"
+            )
         self._sidebar_toggle_btn.clicked.connect(self._toggle_sidebar)
         sidebar_layout.addWidget(self._sidebar_toggle_btn)
 
@@ -655,6 +662,27 @@ class MainWindow(QMainWindow):
         logging.info("[VRCMT-UI] on_media_selected done id=%s", iid)
 
     # F8: Colapsar / expandir sidebar -----------------------------------------
+    # Estilo compacto (solo icono, centrado) / Compact style (icon-only, centered)
+    _NAV_BTN_COMPACT_STYLE = (
+        "QPushButton#NavButton {"
+        "  text-align: center; padding: 10px 0px;"
+        "  margin: 4px 4px; font-size: 20px; border-radius: 8px;"
+        "}"
+    )
+
+    def _apply_sidebar_compact_styles(self, compact: bool) -> None:
+        """Aplica/quita el estilo compacto a todos los botones del sidebar.
+        Applies/removes compact style to all sidebar buttons."""
+        style = self._NAV_BTN_COMPACT_STYLE if compact else ""
+        for btn in self.nav_group:
+            if shiboken.isValid(btn):
+                btn.setStyleSheet(style)
+        if shiboken.isValid(self._sidebar_toggle_btn):
+            self._sidebar_toggle_btn.setStyleSheet(
+                "QPushButton#NavButton { text-align: center; padding: 6px 0px; margin: 4px 4px; }"
+                if compact else ""
+            )
+
     def _toggle_sidebar(self):
         """Alterna el sidebar entre modo compacto (iconos) y expandido (texto).
         Toggle sidebar between compact (icons) and expanded (text) mode."""
@@ -668,6 +696,7 @@ class MainWindow(QMainWindow):
                     full = next((t for t in self._nav_full_texts if t.startswith(emoji)), emoji)
                     btn.setToolTip(full.split(" ", 1)[1] if " " in full else full)
             self._sidebar_toggle_btn.setText("▶")
+            self._apply_sidebar_compact_styles(True)
         else:
             self.sidebar.setFixedWidth(220)
             self.logo_lbl.setVisible(True)
@@ -676,6 +705,7 @@ class MainWindow(QMainWindow):
                     btn.setText(full_text)
                     btn.setToolTip("")
             self._sidebar_toggle_btn.setText("◀")
+            self._apply_sidebar_compact_styles(False)
 
     # F1: Poblar combo de géneros -----------------------------------------------
     def _populate_genre_combo(self):

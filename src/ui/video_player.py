@@ -697,14 +697,18 @@ class VRCMTPlayer(QDialog):
                     except Exception:
                         pass
 
+                # Priorizar formatos progresivos (video+audio en un archivo) que no necesitan ffmpeg.
+                # Para YouTube: 22=720p mp4, 18=360p mp4. Sin ffmpeg no se puede hacer merge.
+                # Prioritize progressive formats (video+audio in one file) that don't need ffmpeg.
+                # For YouTube: 22=720p mp4, 18=360p mp4. Without ffmpeg, merging is not possible.
                 ydl_opts = {
                     "outtmpl": os.path.join(dest_dir, "%(title)s.%(ext)s"),
-                    "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+                    "format": "best[ext=mp4]/best[height<=720]/best",
                     "quiet": True,
                     "no_warnings": True,
                     "noplaylist": True,
                     "progress_hooks": [_progress_hook],
-                    "merge_output_format": "mp4",
+                    "overwrites": True,
                 }
                 # Añadir cookies si están configuradas / Add cookies if configured
                 if self.engine:

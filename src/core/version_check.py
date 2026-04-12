@@ -1,7 +1,7 @@
 import threading
 import logging
 
-CURRENT_VERSION = "2.0.7"
+CURRENT_VERSION = "2.0.8"
 _DEFAULT_VERSION_URL = "https://raw.githubusercontent.com/doctorlatex/VRCMT/master/version.txt"
 
 
@@ -24,12 +24,18 @@ def check_for_updates(callback, timeout=8, custom_url=None):
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 if resp.status == 200:
                     remote = resp.read().decode("utf-8-sig", errors="ignore").strip()
+                    logging.info(
+                        "[OTA] version remota: %s | version local: %s",
+                        remote, CURRENT_VERSION,
+                    )
                     if remote and _version_tuple(remote) > _version_tuple(CURRENT_VERSION):
-                        logging.info("OTA: nueva version %s disponible", remote)
+                        logging.info("[OTA] Nueva version disponible: %s → activando banner", remote)
                         callback(remote)
                         return
+                    else:
+                        logging.info("[OTA] Version al dia. Sin actualizacion.")
         except Exception as e:
-            logging.debug("OTA check: %s", e)
+            logging.warning("[OTA] Error al verificar actualizacion: %s", e)
         callback(None)
 
     threading.Thread(target=_run, daemon=True, name="VRCMT-OTA").start()
