@@ -3105,8 +3105,54 @@ class MediaModal(QFrame):
         # Si la URL es una imagen → abrir visor de imágenes interno
         if url and self.engine.img_manager.is_image_url(url):
             try:
-                from src.ui.image_viewer import open_image_viewer
-                open_image_viewer(url, title, self.engine, self.window())
+                from src.ui.image_viewer import open_image_viewer, _is_discord_cdn_url, _is_discord_cdn_expired, _local_cache_path
+
+                # Resolver la mejor fuente disponible para la imagen:
+                # 1. Si hay caché local en el viewer cache → usarla
+                # 2. Si URL Discord CDN expirada → intentar poster_path local del ítem
+                # 3. En otro caso → usar la URL remota normalmente
+                # Resolve best available source for the image:
+                # 1. If local viewer cache exists → use it
+                # 2. If Discord CDN URL expired → try item's local poster_path
+                # 3. Otherwise → use remote URL normally
+                resolved_url = url
+                if url.startswith(('http://', 'https://')):
+                    cached = _local_cache_path(url)
+                    if os.path.isfile(cached):
+                        resolved_url = cached
+                    elif _is_discord_cdn_url(url) and _is_discord_cdn_expired(url):
+                        # URL de Discord expirada → buscar alternativa local
+                        # Expired Discord URL → look for local alternative
+                        local_poster = (getattr(self.item, 'poster_path', '') or '').strip()
+                        if local_poster and os.path.isfile(local_poster):
+                            resolved_url = local_poster
+                            logging.info(
+                                "ImageViewer: URL Discord expirada, usando poster_path local: %s",
+                                local_poster,
+                            )
+                        else:
+                            # Buscar en captures dir por hash del path sin query
+                            # Search captures dir by hash of path without query
+                            from src.core.paths import CAPTURES_DIR
+                            import hashlib
+                            path_part = url.split("?")[0]
+                            world = (getattr(self.item, 'world_name', '') or getattr(self.item, 'titulo', '') or '').strip()
+                            if world:
+                                safe = "".join(x for x in world if x.isalnum() or x in " -_")
+                                world_dir = os.path.join(CAPTURES_DIR, safe)
+                                file_hash = hashlib.md5(path_part.encode()).hexdigest()
+                                ext = path_part.rsplit(".", 1)[-1]
+                                if len(ext) > 5 or not ext.isalpha():
+                                    ext = "jpg"
+                                candidate = os.path.join(world_dir, f"capture_{file_hash}.{ext}")
+                                if os.path.isfile(candidate):
+                                    resolved_url = candidate
+                                    logging.info(
+                                        "ImageViewer: usando captura local de '%s': %s",
+                                        world, candidate,
+                                    )
+
+                open_image_viewer(resolved_url, title, self.engine, self.window())
             except Exception as e:
                 logging.error("Error abriendo visor de imágenes: %s", e)
                 webbrowser.open(url)

@@ -70,6 +70,44 @@ def _bytes_from_url(url: str, timeout: int = 15) -> bytes:
     return resp.content
 
 
+# ── caché local de imágenes descargadas ──────────────────────────────────────
+
+def _local_cache_path(url: str) -> str:
+    """Calcula la ruta de caché local para una URL de imagen.
+    El hash se calcula sobre el path sin query (así las URLs renovadas de Discord
+    reutilizan el mismo archivo ya descargado).
+    Returns the local cache path for an image URL.
+    Hash is computed over path without query (so renewed Discord URLs reuse the same file)."""
+    import hashlib
+    from src.core.paths import CAPTURES_DIR
+    path_part = url.split("?")[0]
+    ext = path_part.rsplit(".", 1)[-1]
+    if len(ext) > 5 or not ext.isalpha():
+        ext = "jpg"
+    file_hash = hashlib.md5(path_part.encode()).hexdigest()
+    cache_dir = os.path.join(CAPTURES_DIR, "_viewer_cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    return os.path.join(cache_dir, f"img_{file_hash}.{ext}")
+
+
+def _is_discord_cdn_expired(url: str) -> bool:
+    """True si la URL de Discord CDN tiene parámetro ex= vencido.
+    True if Discord CDN URL has an expired ex= parameter."""
+    import re, time
+    m = re.search(r"[?&]ex=([0-9a-fA-F]+)", url)
+    if not m:
+        return False
+    try:
+        return time.time() > int(m.group(1), 16)
+    except Exception:
+        return False
+
+
+def _is_discord_cdn_url(url: str) -> bool:
+    u = (url or "").lower()
+    return "discordapp.net" in u or "cdn.discordapp.com" in u
+
+
 # ── worker para carga asíncrona ───────────────────────────────────────────────
 
 class _LoadSignals(QObject):
@@ -490,14 +528,39 @@ class ImageViewerModal(QFrame):
     # ── carga de imagen ───────────────────────────────────────────────────────
 
     def _start_loading(self):
-        if self.url.startswith(('http://', 'https://')):
-            worker = _LoadWorker(self.url)
+        url = self.url
+        if url.startswith(('http://', 'https://')):
+            # 1. Comprobar caché local primero (evita descarga repetida y protege contra URLs expiradas)
+            # 1. Check local cache first (avoids re-downloading and protects against expired URLs)
+            cached = _local_cache_path(url)
+            if os.path.isfile(cached):
+                log.debug("ImageViewer: cargando desde caché local: %s", cached)
+                try:
+                    with open(cached, 'rb') as f:
+                        self._on_loaded(f.read())
+                    return
+                except Exception:
+                    pass  # si la caché está corrupta, intentar descargar de nuevo
+
+            # 2. URL de Discord CDN expirada sin caché → error amigable
+            # 2. Expired Discord CDN URL without cache → friendly error
+            if _is_discord_cdn_url(url) and _is_discord_cdn_expired(url):
+                self._on_load_error(
+                    "URL de Discord CDN expirada. La imagen ya no está disponible en el servidor.\n"
+                    "Discord CDN URL expired. The image is no longer available on the server.\n\n"
+                    "Puedes abrir la URL en el navegador o actualizar el enlace en el catálogo."
+                )
+                return
+
+            # 3. Descarga normal
+            # 3. Normal download
+            worker = _LoadWorker(url)
             worker.signals.finished.connect(self._on_loaded)
             worker.signals.error.connect(self._on_load_error)
             QThreadPool.globalInstance().start(worker)
         else:
             try:
-                with open(self.url, 'rb') as f:
+                with open(url, 'rb') as f:
                     self._on_loaded(f.read())
             except Exception as e:
                 self._on_load_error(str(e))
@@ -512,6 +575,18 @@ class ImageViewerModal(QFrame):
         self.canvas.set_pixmap(pix)
         w, h = pix.width(), pix.height()
         self.lbl_status.setText(f"{w} × {h} px")
+
+        # Guardar en caché local automáticamente si era una URL remota (no ya un archivo local)
+        # Auto-save to local cache if it was a remote URL (not already a local file)
+        if self.url.startswith(('http://', 'https://')):
+            try:
+                cached = _local_cache_path(self.url)
+                if not os.path.isfile(cached):
+                    with open(cached, 'wb') as f:
+                        f.write(data)
+                    log.debug("ImageViewer: imagen guardada en caché local: %s", cached)
+            except Exception as _ce:
+                log.debug("ImageViewer: no se pudo guardar en caché: %s", _ce)
 
         if _pil_available():
             try:

@@ -12,7 +12,7 @@ class _OTASignals(QObject):
     progress = Signal(int, int)   # bytes_downloaded, total_bytes
     done = Signal(bool, str)      # ok, message_or_path
 
-APP_VERSION   = "2.0.10"
+APP_VERSION   = "2.0.11"
 APP_NAME      = "VRCMT — VRChat Media Tracker"
 APP_AUTHOR    = "DoctorLatex"
 APP_CONTACT   = "Discord: DoctorLatex"
