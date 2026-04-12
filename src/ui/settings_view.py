@@ -320,6 +320,11 @@ class SettingsView(QWidget):
                 "Marcar esto no instala nada por sí solo — usa el botón azul para instalar.",
             )
         )
+        # Auto-guardar al marcar/desmarcar — sin necesidad de pulsar "Guardar"
+        # Auto-save on check/uncheck — no need to click "Save"
+        self.stub_chk_enabled.stateChanged.connect(
+            lambda v: self.engine.config.save_config("vrchat_stub_enabled", bool(v))
+        )
         stub_l.addWidget(self.stub_chk_enabled)
 
         # Casilla: restaurar al cerrar — visible junto a la opción principal para mayor claridad
@@ -339,6 +344,10 @@ class SettingsView(QWidget):
                 "stub_tip_restore_exit",
                 "Si está marcado, al cerrar VRCMT se restaurará el yt-dlp original de VRChat automáticamente.",
             )
+        )
+        # Auto-guardar al marcar/desmarcar / Auto-save on check/uncheck
+        self.stub_chk_restore_exit.stateChanged.connect(
+            lambda v: self.engine.config.save_config("vrchat_stub_restore_on_exit", bool(v))
         )
         stub_l.addWidget(self.stub_chk_restore_exit)
 
