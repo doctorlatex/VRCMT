@@ -93,13 +93,14 @@ def download_update(
     threading.Thread(target=_run, daemon=True, name="VRCMT-Updater").start()
 
 
-def apply_update_and_restart(update_exe_path: str) -> None:
+def apply_update_and_restart(update_exe_path: str, new_version: str = "") -> None:
     """
     Escribe un script .bat que, una vez que VRCMT.exe cierre:
-      1. Espera 2 segundos
+      1. Espera 3 segundos
       2. Renombra el exe viejo a VRCMT_old.bak (el proceso sigue ok desde su handle)
-      3. Mueve VRCMT_update.exe → VRCMT.exe
-      4. Relanza VRCMT.exe
+      3. Si se conoce new_version: mueve VRCMT_update.exe → VRCMTv{new_version}.exe
+         Si no:                    mueve VRCMT_update.exe → mismo nombre que tenía el exe viejo
+      4. Relanza el nuevo exe
       5. Se autoelimiina
 
     Luego lanza el .bat completamente desacoplado y llama os._exit(0).
@@ -113,7 +114,19 @@ def apply_update_and_restart(update_exe_path: str) -> None:
     bat_path = os.path.join(tempfile.gettempdir(), "vrcmt_updater.bat")
     old_bak  = os.path.join(exe_dir, "VRCMT_old.bak")
 
-    # Limpiar backup anterior si existe
+    # Decidir nombre del nuevo exe:
+    # Si tenemos la versión nueva, lo llamamos VRCMTv{new_version}.exe para que sea visible.
+    # Si no, mantenemos el mismo nombre que el exe actual (compatibilidad hacia atrás).
+    # Decide new exe name:
+    # If we have the new version, name it VRCMTv{new_version}.exe so it's clearly versioned.
+    # Otherwise keep the same name as the current exe (backward compatibility).
+    if new_version:
+        new_exe_name = f"VRCMTv{new_version}.exe"
+    else:
+        new_exe_name = os.path.basename(current_exe)
+
+    new_exe = os.path.join(exe_dir, new_exe_name)
+
     bat_content = f"""@echo off
 chcp 65001 > nul
 echo [VRCMT Updater] Esperando cierre de la app...
@@ -122,10 +135,10 @@ timeout /t 3 /nobreak > nul
 echo [VRCMT Updater] Reemplazando ejecutable...
 if exist "{old_bak}" del /f /q "{old_bak}"
 rename "{current_exe}" "VRCMT_old.bak"
-move /y "{update_exe_path}" "{current_exe}"
+move /y "{update_exe_path}" "{new_exe}"
 
 echo [VRCMT Updater] Relanzando VRCMT...
-start "" "{current_exe}"
+start "" "{new_exe}"
 
 echo [VRCMT Updater] Limpiando archivos temporales...
 if exist "{old_bak}" del /f /q "{old_bak}"
@@ -135,7 +148,10 @@ del /f /q "%~f0"
     with open(bat_path, "w", encoding="utf-8") as f:
         f.write(bat_content)
 
-    logging.info("self_updater: lanzando updater bat: %s", bat_path)
+    logging.info(
+        "self_updater: lanzando updater bat: %s → nuevo exe: %s",
+        bat_path, new_exe,
+    )
 
     # Lanzar completamente desacoplado (sin ventana, sin esperar)
     subprocess.Popen(

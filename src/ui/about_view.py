@@ -547,7 +547,10 @@ class AboutView(QWidget):
         def _on_done_slot(ok: bool, msg: str) -> None:
             if ok:
                 self._btn_install_update.setText("✅  Instalando y reiniciando…")
-                apply_update_and_restart(msg)
+                # Pasar la versión nueva para que el exe se llame VRCMTv{version}.exe
+                # Pass new version so the exe is named VRCMTv{version}.exe
+                _new_ver = getattr(self, '_pending_version', '')
+                apply_update_and_restart(msg, new_version=_new_ver)
             else:
                 self._btn_install_update.setEnabled(True)
                 self._btn_install_update.setText("⬇️  Instalar actualización")
