@@ -114,7 +114,8 @@ class MainWindow(QMainWindow):
     def __init__(self, engine):
         super().__init__()
         self.engine = engine
-        self.setWindowTitle(f"VRCMT v2.0 - {self.engine.config.tr('lbl_app_subtitle', 'Next Gen Tracker')}")
+        from src.core.version_check import CURRENT_VERSION as _VER
+        self.setWindowTitle(f"VRCMT v{_VER} - {self.engine.config.tr('lbl_app_subtitle', 'Next Gen Tracker')}")
         # Ajuste de tamaño inicial para 5 tarjetas (v2.11.15)
         # 1150px garantiza que las 5 columnas entren con total comodidad
         self.resize(1150, 900)
@@ -241,7 +242,8 @@ class MainWindow(QMainWindow):
         """Refresca toda la interfaz gráfica en vivo sin reiniciar el programa (v4.0)
         Refresh entire UI live without restarting (v4.0)"""
         logging.info(f"Cambiando idioma de UI a: {new_lang}")
-        self.setWindowTitle(f"VRCMT v2.0 - {self.engine.config.tr('lbl_app_subtitle', 'Next Gen Tracker')}")
+        from src.core.version_check import CURRENT_VERSION as _VER
+        self.setWindowTitle(f"VRCMT v{_VER} - {self.engine.config.tr('lbl_app_subtitle', 'Next Gen Tracker')}")
 
         # Guardar estado actual / Save current state
         current_idx = self.content_stack.currentIndex()

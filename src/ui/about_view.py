@@ -12,7 +12,9 @@ class _OTASignals(QObject):
     progress = Signal(int, int)   # bytes_downloaded, total_bytes
     done = Signal(bool, str)      # ok, message_or_path
 
-APP_VERSION   = "2.0.11"
+# Versión centralizada — importada de version_check para evitar duplicados
+# Centralized version — imported from version_check to avoid duplicates
+from src.core.version_check import CURRENT_VERSION as APP_VERSION  # noqa: E402
 APP_NAME      = "VRCMT — VRChat Media Tracker"
 APP_AUTHOR    = "DoctorLatex"
 APP_CONTACT   = "Discord: DoctorLatex"

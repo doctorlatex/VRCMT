@@ -89,7 +89,8 @@ def _resolve_icon_path() -> str:
 
 
 def main():
-    logging.info("🏁 Iniciando VRCMT v2.0 - Next Generation")
+    from src.core.version_check import CURRENT_VERSION as _VER
+    logging.info("🏁 Iniciando VRCMT v%s - Next Generation", _VER)
 
     # Establecer AppUserModelID para que Windows muestre el ícono correcto en la barra de tareas
     # (Debe llamarse ANTES de crear QApplication)
@@ -162,7 +163,7 @@ def main():
         logging.critical(f"💥 Error fatal en el bucle principal: {e}")
         exit_code = 1
     
-    logging.info("🔌 Cerrando VRCMT v2.0...")
+    logging.info("🔌 Cerrando VRCMT v%s...", _VER)
     
     # Limpieza Quirúrgica Pro activa (GitHub Best Practices)
     if hasattr(engine, 'stop'):

@@ -10,6 +10,7 @@ import threading
 import urllib.parse
 import webbrowser
 import requests
+from src.core.version_check import CURRENT_VERSION as _VRCMT_VERSION
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -366,7 +367,7 @@ class DiscordManager:
                     state=state,
                     start=start_time,
                     large_image="logo_tracker",
-                    large_text="VRCMT v2.0"
+                    large_text=_VRCMT_VERSION
                 )
             else:
                 self.rpc.clear()

@@ -13,6 +13,7 @@ from src.core.scanner import VRChatLogScanner
 from src.core.image_manager import ImageManager
 from src.core.timer import PlaybackTimer
 from src.core.config import ConfigManager
+from src.core.version_check import CURRENT_VERSION as _APP_VERSION
 from src.api.tmdb_client import TMDBClient
 from src.api.discord_rpc import DiscordManager
 from src.api.firebase_client import FirebaseClient
@@ -186,7 +187,7 @@ class VRCMTEngine:
             logging.info(f"🌍 Sesión recuperada: {self.current_world} | {'🎬 ' + self.current_media_title if self.current_media_title else 'Explorando'}")
             self._update_rpc()
         else:
-            self.discord.update_presence(details="VRCMT v2.0", state="Esperando actividad...")
+            self.discord.update_presence(details=f"VRCMT v{_APP_VERSION}", state="Esperando actividad...")
 
         threading.Thread(target=self._main_loop, daemon=True).start()
 
@@ -223,7 +224,7 @@ class VRCMTEngine:
                 logging.debug("OTA launch: %s", _e)
         threading.Thread(target=_ota_launch, daemon=True, name="VRCMT-OTA-launcher").start()
 
-        logging.info(f"🚀 Motor VRCMT v2.5 iniciado. (API: {self.tmdb.api_key[:4]}... | Log: {os.path.basename(self.scanner.log_dir)})")
+        logging.info(f"🚀 Motor VRCMT v{_APP_VERSION} iniciado. (API: {self.tmdb.api_key[:4]}... | Log: {os.path.basename(self.scanner.log_dir)})")
 
     def _update_rpc(self):
         """Sincroniza el estado de Discord con el mundo y el contenido actual (v2.11.51)"""
