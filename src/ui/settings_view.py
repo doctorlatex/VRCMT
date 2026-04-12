@@ -469,13 +469,20 @@ class SettingsView(QWidget):
         )
         adv_l.addWidget(self.stub_chk_restore_exit)
 
-        # URL del manifest
-        from src.core.vrchat_ytdlp_stub import _DEFAULT_STUB_MANIFEST_URL
+        # URL del manifest — se muestra vacío por defecto; la URL real se usa internamente.
+        # Manifest URL — shown empty by default; the real URL is used internally.
         adv_l.addWidget(
-            QLabel(_tr("lbl_stub_step_link", "🔗  URL del manifest (no cambiar salvo que sepas lo que haces):"))
+            QLabel(_tr("lbl_stub_step_link", "🔗  URL personalizada del manifest (opcional, avanzado):"))
         )
+        # Solo mostrar si el usuario ya guardó una URL personalizada (distinta de la interna)
+        # Only show if user already saved a custom URL (different from the internal one)
+        from src.core.vrchat_ytdlp_stub import _DEFAULT_STUB_MANIFEST_URL
         _saved_url = self.engine.config.get_val("vrchat_stub_manifest_url", "") or ""
-        self.stub_manifest_input = QLineEdit(_saved_url or _DEFAULT_STUB_MANIFEST_URL)
+        _display_url = _saved_url if (_saved_url and _saved_url != _DEFAULT_STUB_MANIFEST_URL) else ""
+        self.stub_manifest_input = QLineEdit(_display_url)
+        self.stub_manifest_input.setPlaceholderText(
+            _tr("stub_manifest_placeholder", "Dejar vacío para usar la URL predeterminada / Leave empty to use default URL")
+        )
         self.stub_manifest_input.setStyleSheet(
             "background-color: #252525; padding: 8px; border-radius: 6px; font-size: 12px; color: #888;"
         )
