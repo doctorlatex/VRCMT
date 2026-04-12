@@ -127,35 +127,6 @@ class SettingsView(QWidget):
         self.backup_manager = BackupManager()
         self.setup_ui()
 
-    def _stub_q_mark(self, tip_key: str, default: str) -> QPushButton:
-        """Icono «?»: clic abre ayuda (fiable en Windows); pasar el ratón también muestra tooltip."""
-        tip = self.engine.config.tr(tip_key, default)
-        title = self.engine.config.tr("lbl_stub_help_popup_title", "Ayuda")
-        hint = self.engine.config.tr("stub_tip_click_hint", "Pulsa el «?» para abrir esta explicación en una ventana.")
-
-        btn = QPushButton("?")
-        btn.setFixedSize(26, 26)
-        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        btn.setAutoDefault(False)
-        btn.setDefault(False)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setStyleSheet(
-            "QPushButton { background-color: #455a64; color: #eceff1; border-radius: 13px; "
-            "font-weight: bold; font-size: 13px; border: 1px solid #78909c; padding: 0px; }"
-            "QPushButton:hover { background-color: #546e7a; }"
-            "QPushButton:pressed { background-color: #607d8b; }"
-        )
-        btn.setToolTip(tip + "\n\n—\n" + hint)
-        btn.setToolTipDuration(60000)
-
-        def _show():
-            box = QMessageBox(QMessageBox.Icon.Information, title, tip, QMessageBox.StandardButton.Ok, self)
-            box.setTextFormat(Qt.TextFormat.PlainText)
-            box.exec()
-
-        btn.clicked.connect(_show)
-        return btn
-
     def setup_ui(self):
         main_l = QVBoxLayout(self)
         main_l.setContentsMargins(0, 0, 0, 0)
@@ -303,357 +274,270 @@ class SettingsView(QWidget):
         export_l.addLayout(btn_row_exp)
         container_l.addWidget(export_card)
 
-        # --- SECCIÓN: YOUTUBE EN VRCHAT (stub yt-dlp) — flujo simple ---
+        # ── SECCIÓN: YOUTUBE EN VRCHAT (stub yt-dlp) ───────────────────────────
         stub_card = QFrame()
-        stub_card.setStyleSheet("background-color: #1a1a1a; border-radius: 15px; padding: 20px; border: 1px solid #2e7d32;")
+        stub_card.setStyleSheet(
+            "background-color: #1a1a1a; border-radius: 15px; padding: 20px; border: 1px solid #2e7d32;"
+        )
         stub_l = QVBoxLayout(stub_card)
-        stub_l.setSpacing(12)
-
-        _tip = self._stub_q_mark
+        stub_l.setSpacing(14)
         _tr = self.engine.config.tr
 
+        # Título + botón ayuda
         stub_title_row = QHBoxLayout()
         stub_title = QLabel(_tr("lbl_stub_vrchat_title", "📺 YouTube en VRChat"))
         stub_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #81c784;")
         stub_title_row.addWidget(stub_title, 1)
-        stub_title_row.addWidget(
-            _tip(
-                "stub_tip_section_title",
-                "Toda esta zona cambia el programa pequeño que VRChat usa para abrir enlaces de YouTube (suele llamarse yt-dlp).\n\n"
-                "La «mejora» es otro ejecutable compatible que suele estar más actualizado. VRCMT puede guardar una copia de seguridad del original, "
-                "instalar la mejora y, si VRChat vuelve a sustituir el archivo, intentar poner de nuevo la mejora al abrir VRCMT.\n\n"
-                "Cierra VRChat antes de instalar o quitar la mejora para que Windows no bloquee el archivo.",
-            ),
-            0,
-            Qt.AlignmentFlag.AlignTop,
+        btn_stub_why = QPushButton(_tr("btn_stub_what_is", "❓ ¿Qué hace esto?"))
+        btn_stub_why.setFixedHeight(34)
+        btn_stub_why.setCursor(Qt.PointingHandCursor)
+        btn_stub_why.setStyleSheet(
+            "QPushButton { background-color: #2a3a2a; color: #aed581; border-radius: 8px; "
+            "font-size: 13px; padding: 0 14px; border: 1px solid #388e3c; }"
+            "QPushButton:hover { background-color: #1b5e20; }"
         )
+        btn_stub_why.clicked.connect(self.on_stub_show_help)
+        stub_title_row.addWidget(btn_stub_why)
         stub_l.addLayout(stub_title_row)
 
-        stub_help = QLabel(_tr("lbl_stub_vrchat_desc", "Ayuda a que los vídeos de YouTube funcionen mejor dentro de VRChat. Cierra VRChat antes de instalar o quitar la mejora."))
-        stub_help.setStyleSheet("color: #b0b0b0; font-size: 14px;")
-        stub_help.setWordWrap(True)
-        stub_l.addWidget(stub_help)
-
-        btn_stub_why = QPushButton(_tr("btn_stub_what_is", "❓ ¿Qué hace esto? (léeme)"))
-        btn_stub_why.setStyleSheet("background-color: #333; color: #aed581; padding: 10px; border-radius: 8px; text-align: left;")
-        btn_stub_why.setCursor(Qt.PointingHandCursor)
-        t_why = _tr(
-            "stub_tip_why_button",
-            "Abre una ventana con la misma explicación resumida. También puedes pasar el ratón por los símbolos «?» de cada apartado para leer ayuda detallada sin cerrar esta pantalla.",
-        )
-        btn_stub_why.setToolTip(t_why)
-        btn_stub_why.setToolTipDuration(60000)
-        btn_stub_why.clicked.connect(self.on_stub_show_help)
-        stub_l.addWidget(btn_stub_why)
-
-        sum_row = QHBoxLayout()
+        # Estado actual — una línea clara
         self.stub_summary_label = QLabel("")
-        self.stub_summary_label.setStyleSheet("color: #e0e0e0; font-size: 14px; font-weight: bold; padding: 8px; background-color: #252525; border-radius: 8px;")
+        self.stub_summary_label.setStyleSheet(
+            "color: #e0e0e0; font-size: 13px; padding: 10px 14px; "
+            "background-color: #252525; border-radius: 8px; border-left: 3px solid #388e3c;"
+        )
         self.stub_summary_label.setWordWrap(True)
-        sum_row.addWidget(self.stub_summary_label, 1)
-        sum_row.addWidget(
-            _tip(
-                "stub_tip_summary",
-                "Este texto resume el estado actual en palabras sencillas:\n\n"
-                "• Si la mejora está desactivada en los ajustes.\n"
-                "• Si falta el programa de VRChat (suele crearse al abrir VRChat al menos una vez).\n"
-                "• Si la mejora ya está instalada y coincide con lo último que instaló VRCMT.\n"
-                "• Si VRChat pudo sustituir el archivo y conviene volver a instalar o reiniciar VRCMT.\n"
-                "• Si activaste la mejora en los ajustes pero aún no has instalado el nuevo ejecutable.\n\n"
-                "Los detalles técnicos (hashes, versiones) están en «Opciones avanzadas».",
-            ),
-            0,
-            Qt.AlignmentFlag.AlignTop,
+        stub_l.addWidget(self.stub_summary_label)
+
+        # Separador
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setStyleSheet("color: #2a2a2a; background: #2a2a2a; max-height: 1px; margin: 2px 0;")
+        stub_l.addWidget(sep)
+
+        # Casilla principal
+        self.stub_chk_enabled = QCheckBox(
+            _tr("lbl_stub_enabled", "✅  Activar mejora de YouTube para VRChat")
         )
-        stub_l.addLayout(sum_row)
-
-        row_chk_en = QHBoxLayout()
-        self.stub_chk_enabled = QCheckBox(_tr("lbl_stub_enabled", "Usar la mejora para YouTube en VRChat"))
-        self.stub_chk_enabled.setChecked(bool(self.engine.config.get_val("vrchat_stub_enabled", False)))
-        self.stub_chk_enabled.setStyleSheet("color: #eee; font-size: 14px;")
-        t_en = _tr(
-            "stub_tip_enabled",
-            "Si está marcado, le dices a VRCMT que quieres usar la mejora para YouTube en VRChat.\n\n"
-            "Efectos principales:\n"
-            "• Al iniciar VRCMT, si la mejora ya estaba instalada y VRChat cambió el archivo, la app intentará volver a poner la mejora (desde copia en caché o descargando otra vez).\n"
-            "• Se actualiza el archivo de configuración lateral (cookies) que lee el ejecutable de la mejora.\n\n"
-            "Marcar la casilla no instala nada por sí solo: después debes usar «Descargar e instalar» o «Ya tengo el archivo…», y conviene pulsar «Guardar».",
+        self.stub_chk_enabled.setChecked(
+            bool(self.engine.config.get_val("vrchat_stub_enabled", False))
         )
-        self.stub_chk_enabled.setToolTip(t_en)
-        self.stub_chk_enabled.setToolTipDuration(60000)
-        row_chk_en.addWidget(self.stub_chk_enabled, 1)
-        row_chk_en.addWidget(_tip("stub_tip_enabled", t_en), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(row_chk_en)
-
-        row_chk_ex = QHBoxLayout()
-        self.stub_chk_restore_exit = QCheckBox(_tr("lbl_stub_restore_exit", "Al cerrar VRCMT, quitar la mejora y dejar VRChat como antes"))
-        self.stub_chk_restore_exit.setChecked(bool(self.engine.config.get_val("vrchat_stub_restore_on_exit", False)))
-        self.stub_chk_restore_exit.setStyleSheet("color: #ccc; font-size: 13px;")
-        t_ex = _tr(
-            "stub_tip_restore_exit",
-            "Si marcas esto, al cerrar la aplicación VRCMT se intentará restaurar automáticamente el yt-dlp original de VRChat desde la copia de seguridad guardada en tu PC.\n\n"
-            "Útil si solo quieres la mejora mientras usas VRCMT y prefieres dejar VRChat «de fábrica» cuando cierras el tracker.\n\n"
-            "Tiene que existir un respaldo previo (se crea la primera vez que instalas la mejora con éxito). Cierra VRChat antes, si puedes, para evitar errores al copiar archivos.",
+        self.stub_chk_enabled.setStyleSheet("color: #eee; font-size: 15px; font-weight: bold;")
+        self.stub_chk_enabled.setToolTip(
+            _tr(
+                "stub_tip_enabled",
+                "Activa la mejora para que VRCMT la reinstale automáticamente si VRChat la sobrescribe.\n"
+                "Marcar esto no instala nada por sí solo — usa el botón azul para instalar.",
+            )
         )
-        self.stub_chk_restore_exit.setToolTip(t_ex)
-        self.stub_chk_restore_exit.setToolTipDuration(60000)
-        row_chk_ex.addWidget(self.stub_chk_restore_exit, 1)
-        row_chk_ex.addWidget(_tip("stub_tip_restore_exit", t_ex), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(row_chk_ex)
+        stub_l.addWidget(self.stub_chk_enabled)
 
-        step1_row = QHBoxLayout()
-        step1 = QLabel(_tr("lbl_stub_step_link", "① URL del repositorio del stub (ya viene configurada — solo cambia si sabes lo que haces):"))
-        step1.setStyleSheet("color: #9e9e9e; font-size: 13px; margin-top: 6px;")
-        step1.setWordWrap(True)
-        step1_row.addWidget(step1, 1)
-        t_link = _tr(
-            "stub_tip_link_field",
-            "Aquí va la dirección web (URL) de un archivo JSON llamado «manifest» que describe la actualización.\n\n"
-            "Ese archivo suele indicar:\n"
-            "• La versión del ejecutable.\n"
-            "• Un enlace directo para descargar el .exe.\n"
-            "• Una huella SHA256 para comprobar que la descarga no está corrupta ni manipulada.\n\n"
-            "Normalmente te pasan esa URL quien mantenga el stub o la documentación del proyecto. Si no tienes URL, deja el campo vacío y usa «Ya tengo el archivo en mi PC…».\n\n"
-            "Al pulsar «Descargar e instalar», VRCMT guarda primero lo que hay escrito aquí aunque no hayas pulsado «Guardar».",
+        # ── Botón principal: Instalar / Actualizar ──────────────────────────
+        self.btn_stub_install_main = QPushButton(
+            _tr("btn_stub_update_manifest", "⬇️  Instalar / Actualizar desde internet")
         )
-        step1_row.addWidget(_tip("stub_tip_link_field", t_link), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(step1_row)
-
-        from src.core.vrchat_ytdlp_stub import _DEFAULT_STUB_MANIFEST_URL
-        _saved_url = self.engine.config.get_val("vrchat_stub_manifest_url", "") or ""
-        self.stub_manifest_input = QLineEdit(_saved_url or _DEFAULT_STUB_MANIFEST_URL)
-        self.stub_manifest_input.setPlaceholderText(_tr("placeholder_stub_url", "https://… (repo oficial por defecto)"))
-        self.stub_manifest_input.setStyleSheet("background-color: #252525; padding: 10px; border-radius: 6px; font-size: 13px;")
-        self.stub_manifest_input.setToolTip(t_link)
-        self.stub_manifest_input.setToolTipDuration(60000)
-        url_row = QHBoxLayout()
-        url_row.addWidget(self.stub_manifest_input, 1)
-        url_row.addWidget(_tip("stub_tip_link_field", t_link), 0, Qt.AlignmentFlag.AlignVCenter)
-        stub_l.addLayout(url_row)
-
-        step2_row = QHBoxLayout()
-        step2 = QLabel(_tr("lbl_stub_step_cookies", "② Solo si hace falta iniciar sesión en YouTube: archivo de cookies (opcional)."))
-        step2.setStyleSheet("color: #9e9e9e; font-size: 13px;")
-        step2.setWordWrap(True)
-        step2_row.addWidget(step2, 1)
-        t_cookies = _tr(
-            "stub_tip_cookies",
-            "Algunos vídeos o canales exigen que YouTube sepa que has iniciado sesión (edad, región, contenido restringido, etc.).\n\n"
-            "Puedes exportar cookies de tu navegador en formato Netscape (archivo de texto) con extensiones o herramientas habituales y elegir ese archivo aquí.\n\n"
-            "VRCMT guarda la ruta y escribe un archivo pequeño en tu carpeta de datos (%LOCALAPPDATA%\\VRCMT) que el ejecutable de la mejora lee al arrancar.\n\n"
-            "Si no tienes problemas de «inicia sesión» o restricciones, puedes dejar esto vacío. No compartas tu archivo de cookies: equivale a credenciales.",
+        self.btn_stub_install_main.setMinimumHeight(52)
+        self.btn_stub_install_main.setCursor(Qt.PointingHandCursor)
+        self.btn_stub_install_main.setStyleSheet(
+            "QPushButton { background-color: #1565c0; color: white; font-size: 15px; "
+            "font-weight: bold; border-radius: 10px; padding: 0 20px; }"
+            "QPushButton:hover { background-color: #1976d2; }"
+            "QPushButton:pressed { background-color: #0d47a1; }"
         )
-        step2_row.addWidget(_tip("stub_tip_cookies", t_cookies), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(step2_row)
+        self.btn_stub_install_main.setToolTip(
+            _tr(
+                "stub_tip_download",
+                "Descarga automáticamente la última versión del stub desde el repositorio oficial,\n"
+                "verifica su integridad (SHA256) e instala reemplazando el yt-dlp de VRChat.\n\n"
+                "⚠️ Cierra VRChat antes de hacer clic.",
+            )
+        )
+        self.btn_stub_install_main.clicked.connect(self.on_stub_update_manifest)
+        stub_l.addWidget(self.btn_stub_install_main)
 
+        # Fila secundaria: instalar desde archivo | quitar
+        btn_row2 = QHBoxLayout()
+        btn_row2.setSpacing(10)
+
+        btn_stub_install_file = QPushButton(_tr("btn_stub_install_file", "📂  Instalar desde archivo…"))
+        btn_stub_install_file.setMinimumHeight(40)
+        btn_stub_install_file.setCursor(Qt.PointingHandCursor)
+        btn_stub_install_file.setStyleSheet(
+            "QPushButton { background-color: #37474f; color: #ddd; font-size: 13px; "
+            "border-radius: 8px; padding: 0 16px; }"
+            "QPushButton:hover { background-color: #455a64; }"
+        )
+        btn_stub_install_file.setToolTip(
+            _tr(
+                "stub_tip_install_file",
+                "Instala un archivo yt-dlp.exe que ya tienes en tu PC.\n"
+                "Útil si alguien te lo envió por Discord o lo descargaste manualmente.",
+            )
+        )
+        btn_stub_install_file.clicked.connect(self.on_stub_install_file)
+
+        btn_stub_restore = QPushButton(_tr("btn_stub_restore", "↩️  Quitar mejora"))
+        btn_stub_restore.setMinimumHeight(40)
+        btn_stub_restore.setCursor(Qt.PointingHandCursor)
+        btn_stub_restore.setStyleSheet(
+            "QPushButton { background-color: #3a1010; color: #ef9a9a; font-size: 13px; "
+            "border-radius: 8px; padding: 0 16px; border: 1px solid #c62828; }"
+            "QPushButton:hover { background-color: #c62828; color: white; }"
+        )
+        btn_stub_restore.setToolTip(
+            _tr(
+                "stub_tip_restore_btn",
+                "Restaura el yt-dlp original de VRChat desde la copia de seguridad.\n"
+                "⚠️ Cierra VRChat antes.",
+            )
+        )
+        btn_stub_restore.clicked.connect(self.on_stub_restore)
+
+        btn_row2.addWidget(btn_stub_install_file, 1)
+        btn_row2.addWidget(btn_stub_restore, 1)
+        stub_l.addLayout(btn_row2)
+
+        # ── Opciones avanzadas (colapsables) ───────────────────────────────
+        self.btn_stub_advanced = QPushButton(_tr("btn_stub_advanced_toggle", "⚙️  Opciones avanzadas ▼"))
+        self.btn_stub_advanced.setCheckable(True)
+        self.btn_stub_advanced.setFixedHeight(36)
+        self.btn_stub_advanced.setCursor(Qt.PointingHandCursor)
+        self.btn_stub_advanced.setStyleSheet(
+            "QPushButton { background-color: #1e1e1e; color: #757575; font-size: 12px; "
+            "border-radius: 6px; padding: 0 14px; text-align: left; border: 1px solid #333; }"
+            "QPushButton:hover { color: #9e9e9e; }"
+            "QPushButton:checked { color: #bbb; }"
+        )
+        self.btn_stub_advanced.clicked.connect(self._on_stub_advanced_toggled)
+        stub_l.addWidget(self.btn_stub_advanced)
+
+        self.stub_advanced_frame = QFrame()
+        self.stub_advanced_frame.setStyleSheet(
+            "background-color: #141414; border-radius: 10px; padding: 4px;"
+        )
+        adv_l = QVBoxLayout(self.stub_advanced_frame)
+        adv_l.setSpacing(10)
+        adv_l.setContentsMargins(14, 12, 14, 12)
+
+        # Cookies
+        adv_l.addWidget(
+            QLabel(_tr("lbl_stub_step_cookies", "🍪  Cookies de YouTube (opcional — para vídeos con restricción de edad):"))
+        )
         cookies_row = QHBoxLayout()
-        self.stub_cookies_input = QLineEdit(self.engine.config.get_val("vrchat_stub_cookies_path", "") or "")
-        self.stub_cookies_input.setPlaceholderText(_tr("placeholder_stub_cookies", "Vacío = no usar cookies"))
-        self.stub_cookies_input.setStyleSheet("background-color: #252525; padding: 10px; border-radius: 6px;")
-        self.stub_cookies_input.setToolTip(t_cookies)
-        self.stub_cookies_input.setToolTipDuration(60000)
-        btn_stub_cookies = QPushButton(_tr("btn_stub_browse_cookies", "📁 Elegir archivo…"))
-        btn_stub_cookies.setMinimumHeight(40)
-        btn_stub_cookies.setStyleSheet("background-color: #424242; color: white; padding: 8px 14px; border-radius: 6px;")
-        btn_stub_cookies.setToolTip(t_cookies)
-        btn_stub_cookies.setToolTipDuration(60000)
+        self.stub_cookies_input = QLineEdit(
+            self.engine.config.get_val("vrchat_stub_cookies_path", "") or ""
+        )
+        self.stub_cookies_input.setPlaceholderText(
+            _tr("placeholder_stub_cookies", "Vacío = sin cookies")
+        )
+        self.stub_cookies_input.setStyleSheet(
+            "background-color: #252525; padding: 8px; border-radius: 6px;"
+        )
+        self.stub_cookies_input.setToolTip(
+            _tr(
+                "stub_tip_cookies",
+                "Exporta las cookies de tu navegador con la extensión «Get cookies.txt» y selecciona el archivo aquí.\n"
+                "Necesario solo para vídeos con restricción de edad o contenido privado.",
+            )
+        )
+        btn_stub_cookies = QPushButton("📁")
+        btn_stub_cookies.setFixedSize(38, 36)
+        btn_stub_cookies.setStyleSheet(
+            "background-color: #333; color: white; border-radius: 6px; font-size: 16px;"
+        )
         btn_stub_cookies.clicked.connect(self.on_stub_browse_cookies)
         cookies_row.addWidget(self.stub_cookies_input, 1)
         cookies_row.addWidget(btn_stub_cookies)
-        cookies_row.addWidget(_tip("stub_tip_cookies", t_cookies), 0, Qt.AlignmentFlag.AlignVCenter)
-        stub_l.addLayout(cookies_row)
+        adv_l.addLayout(cookies_row)
 
-        step3_row = QHBoxLayout()
-        step3 = QLabel(_tr("lbl_stub_step_actions", "③ Elige una acción (recomendado: primero «Guardar», luego instalar):"))
-        step3.setStyleSheet("color: #9e9e9e; font-size: 13px;")
-        step3.setWordWrap(True)
-        step3_row.addWidget(step3, 1)
-        t_actions = _tr(
-            "stub_tip_step_actions",
-            "• Guardar: escribe en disco casillas, enlace, cookies y opciones avanzadas, y actualiza el archivo de cookies lateral.\n\n"
-            "• Descargar e instalar: necesita el enlace del manifest arriba; descarga el .exe, comprueba el hash y sustituye el yt-dlp de VRChat (con copia de seguridad del original).\n\n"
-            "• Ya tengo el archivo: eliges un .exe que te hayan pasado; hace la misma sustitución con respaldo.\n\n"
-            "• Quitar la mejora: vuelve a poner el ejecutable original desde el respaldo.\n\n"
-            "En todos los casos es recomendable tener VRChat cerrado.",
+        # Casilla: restaurar al cerrar
+        self.stub_chk_restore_exit = QCheckBox(
+            _tr(
+                "lbl_stub_restore_exit",
+                "Quitar la mejora automáticamente al cerrar VRCMT",
+            )
         )
-        step3_row.addWidget(_tip("stub_tip_step_actions", t_actions), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(step3_row)
+        self.stub_chk_restore_exit.setChecked(
+            bool(self.engine.config.get_val("vrchat_stub_restore_on_exit", False))
+        )
+        self.stub_chk_restore_exit.setStyleSheet("color: #aaa; font-size: 13px;")
+        self.stub_chk_restore_exit.setToolTip(
+            _tr(
+                "stub_tip_restore_exit",
+                "Si está marcado, al cerrar VRCMT se restaurará el yt-dlp original de VRChat automáticamente.",
+            )
+        )
+        adv_l.addWidget(self.stub_chk_restore_exit)
 
-        btn_style_big = "padding: 14px 16px; font-size: 14px; font-weight: bold; border-radius: 10px;"
+        # URL del manifest
+        from src.core.vrchat_ytdlp_stub import _DEFAULT_STUB_MANIFEST_URL
+        adv_l.addWidget(
+            QLabel(_tr("lbl_stub_step_link", "🔗  URL del manifest (no cambiar salvo que sepas lo que haces):"))
+        )
+        _saved_url = self.engine.config.get_val("vrchat_stub_manifest_url", "") or ""
+        self.stub_manifest_input = QLineEdit(_saved_url or _DEFAULT_STUB_MANIFEST_URL)
+        self.stub_manifest_input.setStyleSheet(
+            "background-color: #252525; padding: 8px; border-radius: 6px; font-size: 12px; color: #888;"
+        )
+        adv_l.addWidget(self.stub_manifest_input)
 
-        t_save = _tr(
-            "stub_tip_save",
-            "Guarda en tu configuración de VRCMT todo lo de esta sección: si quieres la mejora, si restaurar al cerrar, el enlace del manifest, la ruta de cookies, ruta personalizada del yt-dlp y token opcional.\n\n"
-            "También escribe el archivo vrchat_stub.json en tu carpeta VRCMT para que la mejora sepa si debe usar cookies.\n\n"
-            "Recomendado pulsar esto antes de instalar, para no perder lo que escribiste.",
+        # Ruta personalizada
+        adv_l.addWidget(
+            QLabel(_tr("lbl_stub_target_exe", "📂  Ruta de yt-dlp de VRChat (vacío = automático):"))
         )
-        row_save = QHBoxLayout()
-        btn_save_stub = QPushButton(_tr("btn_stub_save", "💾 Guardar mi configuración"))
-        btn_save_stub.setMinimumHeight(48)
-        btn_save_stub.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        btn_save_stub.setStyleSheet("background-color: #2e7d32; color: white;" + btn_style_big)
-        btn_save_stub.setToolTip(t_save)
-        btn_save_stub.setToolTipDuration(60000)
-        btn_save_stub.clicked.connect(self.on_save_stub)
-        row_save.addWidget(btn_save_stub, 1)
-        row_save.addWidget(_tip("stub_tip_save", t_save), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(row_save)
+        self.stub_target_input = QLineEdit(
+            self.engine.config.get_val("vrchat_ytdlp_target_path", "") or ""
+        )
+        self.stub_target_input.setPlaceholderText(
+            _tr("stub_target_placeholder", "Vacío = detectar automáticamente")
+        )
+        self.stub_target_input.setStyleSheet(
+            "background-color: #252525; padding: 8px; border-radius: 6px; font-size: 12px;"
+        )
+        adv_l.addWidget(self.stub_target_input)
 
-        t_dl = _tr(
-            "stub_tip_download",
-            "Descarga desde internet el manifest (JSON) que pusiste en el enlace, lee la URL del instalador y el SHA256 esperado, descarga el .exe y comprueba que el hash coincide.\n\n"
-            "Si todo es correcto, guarda una copia del yt-dlp actual de VRChat (solo la primera vez) y sustituye el archivo en la carpeta Tools de VRChat.\n\n"
-            "Requiere enlace en el campo superior; si está vacío, la app te avisará. Cierra VRChat antes para evitar fallos al copiar.\n\n"
-            "Si la versión del manifest no es mayor que la ya instalada, puede indicar que ya estabas al día.",
+        # Token de GitHub
+        adv_l.addWidget(
+            QLabel(_tr("lbl_stub_gh_token", "🔑  Token de GitHub (solo para repos privados):"))
         )
-        row_dl = QHBoxLayout()
-        btn_stub_update = QPushButton(_tr("btn_stub_update_manifest", "⬇️ Descargar e instalar desde internet"))
-        btn_stub_update.setMinimumHeight(48)
-        btn_stub_update.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        btn_stub_update.setStyleSheet("background-color: #1565c0; color: white;" + btn_style_big)
-        btn_stub_update.setToolTip(t_dl)
-        btn_stub_update.setToolTipDuration(60000)
-        btn_stub_update.clicked.connect(self.on_stub_update_manifest)
-        row_dl.addWidget(btn_stub_update, 1)
-        row_dl.addWidget(_tip("stub_tip_download", t_dl), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(row_dl)
-
-        t_file = _tr(
-            "stub_tip_install_file",
-            "Abre el explorador de archivos para que elijas un yt-dlp.exe que ya tengas descargado (por ejemplo te lo enviaron por Discord o lo bajaste manualmente).\n\n"
-            "Hace copia de seguridad del ejecutable actual de VRChat si aún no existe y sustituye el archivo en la ruta de VRChat.\n\n"
-            "No necesitas el enlace del manifest para esta opción. Cierra VRChat antes.\n\n"
-            "Antes de instalar, VRCMT guarda automáticamente lo que hay en pantalla (como el enlace o las cookies) para usar la configuración correcta.",
+        self.stub_token_input = QLineEdit(
+            self.engine.config.get_val("vrchat_stub_github_token", "") or ""
         )
-        row_file = QHBoxLayout()
-        btn_stub_install = QPushButton(_tr("btn_stub_install_file", "📂 Ya tengo el archivo en mi PC…"))
-        btn_stub_install.setMinimumHeight(44)
-        btn_stub_install.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        btn_stub_install.setStyleSheet("background-color: #37474f; color: white; padding: 12px; font-size: 13px; border-radius: 10px;")
-        btn_stub_install.setToolTip(t_file)
-        btn_stub_install.setToolTipDuration(60000)
-        btn_stub_install.clicked.connect(self.on_stub_install_file)
-        row_file.addWidget(btn_stub_install, 1)
-        row_file.addWidget(_tip("stub_tip_install_file", t_file), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(row_file)
-
-        t_rest = _tr(
-            "stub_tip_restore_btn",
-            "Intenta devolver el yt-dlp original de VRChat usando la copia de seguridad guardada en la carpeta backups de VRCMT.\n\n"
-            "Te pedirá confirmación. Si VRChat está abierto, Windows a veces bloquea el archivo: ciérralo antes.\n\n"
-            "No borra la mejora de tu disco por completo: puede seguir en caché por si quieres reinstalarla después.",
-        )
-        row_rest = QHBoxLayout()
-        btn_stub_restore = QPushButton(_tr("btn_stub_restore", "↩️ Quitar la mejora (volver al de VRChat)"))
-        btn_stub_restore.setMinimumHeight(44)
-        btn_stub_restore.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        btn_stub_restore.setStyleSheet("background-color: #c62828; color: white; padding: 12px; font-size: 13px; border-radius: 10px;")
-        btn_stub_restore.setToolTip(t_rest)
-        btn_stub_restore.setToolTipDuration(60000)
-        btn_stub_restore.clicked.connect(self.on_stub_restore)
-        row_rest.addWidget(btn_stub_restore, 1)
-        row_rest.addWidget(_tip("stub_tip_restore_btn", t_rest), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(row_rest)
-
-        t_adv = _tr(
-            "stub_tip_advanced",
-            "Aquí se agrupan ajustes que la mayoría no necesita.\n\n"
-            "• Ruta personalizada del yt-dlp de VRChat: solo si tu instalación no está en la ubicación habitual.\n"
-            "• Token de GitHub: solo si la descarga del manifest o del exe exige autenticación (repositorios privados o límites de API).\n"
-            "• Detalles técnicos: versión registrada, si el stub está activo a nivel de archivos, fragmentos de hash, etc.\n\n"
-            "Pulsa el botón para desplegar u ocultar estas opciones.",
-        )
-        row_adv = QHBoxLayout()
-        self.btn_stub_advanced = QPushButton(_tr("btn_stub_advanced_toggle", "⚙️ Opciones avanzadas ▼"))
-        self.btn_stub_advanced.setCheckable(True)
-        self.btn_stub_advanced.setStyleSheet("background-color: #2a2a2a; color: #9e9e9e; padding: 10px; border-radius: 6px; text-align: left;")
-        self.btn_stub_advanced.setToolTip(t_adv)
-        self.btn_stub_advanced.setToolTipDuration(60000)
-        self.btn_stub_advanced.clicked.connect(self._on_stub_advanced_toggled)
-        row_adv.addWidget(self.btn_stub_advanced, 1)
-        row_adv.addWidget(_tip("stub_tip_advanced", t_adv), 0, Qt.AlignmentFlag.AlignTop)
-        stub_l.addLayout(row_adv)
-
-        self.stub_advanced_frame = QFrame()
-        self.stub_advanced_frame.setStyleSheet("background-color: #141414; border-radius: 8px; padding: 12px;")
-        adv_l = QVBoxLayout(self.stub_advanced_frame)
-        adv_l.setSpacing(8)
-
-        t_target = _tr(
-            "stub_tip_target_path",
-            "Ruta completa al archivo yt-dlp.exe que VRChat ejecuta. En instalaciones normales de Windows suele estar bajo AppData\\LocalLow\\VRChat\\VRChat\\Tools\\.\n\n"
-            "Déjalo vacío para que VRCMT use esa ubicación automática. Solo rellénalo si VRChat está en otra carpeta, es una copia portable o te indicaron una ruta concreta.\n\n"
-            "Si la ruta no existe o no es un .exe, instalar o restaurar fallará hasta que corrijas el campo y guardes.",
-        )
-        rl_tar = QHBoxLayout()
-        rl_tar.addWidget(
-            QLabel(_tr("lbl_stub_target_exe", "Ruta del yt-dlp de VRChat (normalmente no hace falta tocarla):")),
-            1,
-        )
-        rl_tar.addWidget(_tip("stub_tip_target_path", t_target), 0, Qt.AlignmentFlag.AlignTop)
-        adv_l.addLayout(rl_tar)
-        self.stub_target_input = QLineEdit(self.engine.config.get_val("vrchat_ytdlp_target_path", "") or "")
-        self.stub_target_input.setStyleSheet("background-color: #252525; padding: 8px; border-radius: 5px;")
-        self.stub_target_input.setToolTip(t_target)
-        self.stub_target_input.setToolTipDuration(60000)
-        rt_in = QHBoxLayout()
-        rt_in.addWidget(self.stub_target_input, 1)
-        rt_in.addWidget(_tip("stub_tip_target_path", t_target), 0, Qt.AlignmentFlag.AlignVCenter)
-        adv_l.addLayout(rt_in)
-
-        t_gh = _tr(
-            "stub_tip_github_token",
-            "Algunas descargas desde GitHub (manifest o ejecutable) fallan por límite de peticiones anónimas o porque el archivo está en un repo privado.\n\n"
-            "Un token personal de GitHub (classic PAT) con permiso mínimo de lectura puede añadirse aquí para que las peticiones HTTP lo envíen en la cabecera Authorization.\n\n"
-            "No lo compartas. Si no sabes para qué sirve, déjalo vacío: la descarga pública normal no lo necesita.",
-        )
-        rl_gh = QHBoxLayout()
-        rl_gh.addWidget(
-            QLabel(_tr("lbl_stub_gh_token", "Token de GitHub (solo si te lo pidieron para descargar):")),
-            1,
-        )
-        rl_gh.addWidget(_tip("stub_tip_github_token", t_gh), 0, Qt.AlignmentFlag.AlignTop)
-        adv_l.addLayout(rl_gh)
-        self.stub_token_input = QLineEdit(self.engine.config.get_val("vrchat_stub_github_token", "") or "")
         self.stub_token_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.stub_token_input.setStyleSheet("background-color: #252525; padding: 8px; border-radius: 5px;")
-        self.stub_token_input.setToolTip(t_gh)
-        self.stub_token_input.setToolTipDuration(60000)
-        rgh_in = QHBoxLayout()
-        rgh_in.addWidget(self.stub_token_input, 1)
-        rgh_in.addWidget(_tip("stub_tip_github_token", t_gh), 0, Qt.AlignmentFlag.AlignVCenter)
-        adv_l.addLayout(rgh_in)
-
-        t_tech = _tr(
-            "stub_tip_technical",
-            "Texto técnico de depuración: si la mejora está activa en configuración, si el archivo en disco coincide con la última instalación registrada, versión del manifest, etc.\n\n"
-            "Útil si algo falla y necesitas comprobar el estado real sin suposiciones.",
+        self.stub_token_input.setPlaceholderText(_tr("stub_token_placeholder", "Vacío = descarga pública"))
+        self.stub_token_input.setStyleSheet(
+            "background-color: #252525; padding: 8px; border-radius: 6px; font-size: 12px;"
         )
-        rl_tech = QHBoxLayout()
-        rl_tech.addWidget(QLabel(_tr("lbl_stub_technical", "Detalles técnicos:")), 1)
-        rl_tech.addWidget(_tip("stub_tip_technical", t_tech), 0, Qt.AlignmentFlag.AlignTop)
-        adv_l.addLayout(rl_tech)
+        adv_l.addWidget(self.stub_token_input)
+
+        # Detalles técnicos
         self.stub_status_label = QLabel("")
-        self.stub_status_label.setStyleSheet("color: #757575; font-size: 11px; font-family: monospace;")
+        self.stub_status_label.setStyleSheet(
+            "color: #555; font-size: 11px; font-family: monospace; padding: 6px 0;"
+        )
         self.stub_status_label.setWordWrap(True)
-        self.stub_status_label.setToolTip(t_tech)
-        self.stub_status_label.setToolTipDuration(60000)
         adv_l.addWidget(self.stub_status_label)
 
-        t_ref = _tr(
-            "stub_tip_refresh_technical",
-            "Vuelve a leer el archivo yt-dlp en disco y el estado guardado por VRCMT, y actualiza el párrafo de detalles técnicos y el resumen verde de arriba.\n\n"
-            "Púlsalo después de instalar, restaurar o si acabas de cerrar VRChat y quieres ver si el archivo cambió.",
+        btn_adv_row = QHBoxLayout()
+        btn_save_stub = QPushButton(_tr("btn_stub_save", "💾  Guardar configuración avanzada"))
+        btn_save_stub.setMinimumHeight(38)
+        btn_save_stub.setStyleSheet(
+            "QPushButton { background-color: #2e7d32; color: white; font-size: 13px; "
+            "border-radius: 8px; padding: 0 16px; }"
+            "QPushButton:hover { background-color: #388e3c; }"
         )
-        rrf = QHBoxLayout()
-        btn_stub_status = QPushButton(_tr("btn_stub_refresh_status", "🔄 Actualizar detalles técnicos"))
-        btn_stub_status.setStyleSheet("background-color: #333; padding: 8px; border-radius: 5px;")
-        btn_stub_status.setToolTip(t_ref)
-        btn_stub_status.setToolTipDuration(60000)
+        btn_save_stub.clicked.connect(self.on_save_stub)
+        btn_stub_status = QPushButton("🔄")
+        btn_stub_status.setFixedSize(38, 38)
+        btn_stub_status.setStyleSheet(
+            "background-color: #333; border-radius: 8px; font-size: 16px;"
+        )
+        btn_stub_status.setToolTip(_tr("btn_stub_refresh_status", "Actualizar estado"))
         btn_stub_status.clicked.connect(self.on_stub_refresh_status)
-        rrf.addWidget(btn_stub_status, 1)
-        rrf.addWidget(_tip("stub_tip_refresh_technical", t_ref), 0, Qt.AlignmentFlag.AlignTop)
-        adv_l.addLayout(rrf)
+        btn_adv_row.addWidget(btn_save_stub, 1)
+        btn_adv_row.addWidget(btn_stub_status)
+        adv_l.addLayout(btn_adv_row)
+
         self.stub_advanced_frame.setVisible(False)
         stub_l.addWidget(self.stub_advanced_frame)
 
@@ -1023,12 +907,29 @@ class SettingsView(QWidget):
 
     def on_stub_update_manifest(self):
         self._persist_stub_fields_from_ui()
+        # Marcar botón como ocupado
+        if hasattr(self, 'btn_stub_install_main') and shiboken.isValid(self.btn_stub_install_main):
+            self.btn_stub_install_main.setEnabled(False)
+            self.btn_stub_install_main.setText("⏳  Descargando…")
 
         def done(ok, msg):
+            if hasattr(self, 'btn_stub_install_main') and shiboken.isValid(self.btn_stub_install_main):
+                self.btn_stub_install_main.setEnabled(True)
+                self.btn_stub_install_main.setText(
+                    self.engine.config.tr("btn_stub_update_manifest", "⬇️  Instalar / Actualizar desde internet")
+                )
             if ok:
-                QMessageBox.information(self, self.engine.config.tr("lbl_success", "Listo"), msg)
+                QMessageBox.information(
+                    self,
+                    self.engine.config.tr("lbl_success", "✅ Listo"),
+                    self.engine.config.tr("msg_stub_installed", msg or "Stub instalado correctamente."),
+                )
             else:
-                QMessageBox.warning(self, self.engine.config.tr("lbl_error", "No se pudo completar"), msg)
+                QMessageBox.warning(
+                    self,
+                    self.engine.config.tr("lbl_error", "No se pudo completar"),
+                    msg,
+                )
             self.on_stub_refresh_status()
 
         w = StubManifestWorker(self.engine, force=False)

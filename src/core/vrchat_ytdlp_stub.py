@@ -234,7 +234,9 @@ class VRChatYtStubManager:
             with open(tmp, "wb") as f:
                 f.write(data)
             ok, msg = self.backup_original_if_needed()
-            if not ok:
+            # Si no existe el original (VRChat nunca se abrió) continuamos igual —
+            # no hay nada que respaldar pero sí podemos instalar.
+            if not ok and os.path.isfile(self.target_exe):
                 return False, msg
             os.replace(tmp, self.target_exe)
         except Exception as e:
