@@ -1332,6 +1332,12 @@ class MediaModal(QFrame):
                 self.te_frame.setVisible(show_episodes)
 
             self.btn_anime.setText("Quitar Anime" if self.item.es_anime else "Marcar Anime")
+            # Ocultar botón Anime para videos públicos (YouTube, Twitch, Kick, etc.)
+            # Hide Anime button for public platform videos (YouTube, Twitch, Kick, etc.)
+            _PUBLIC_HOSTS = ('youtube.com', 'youtu.be', 'twitch.tv', 'kick.com', 'soundcloud.com', 'music.youtube.com')
+            _url_lower = str(self.item.url or "").lower()
+            _is_public_video = any(h in _url_lower for h in _PUBLIC_HOSTS)
+            self.btn_anime.setVisible(not _is_public_video)
             
             # Botón principal izquierdo: texto y visibilidad según tipo de contenido
             urow = str(self.item.url or "")

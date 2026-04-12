@@ -6,6 +6,12 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QThreadPool, QRunnable, QObject
 
+
+class _OTASignals(QObject):
+    """Señales thread-safe para el descargador OTA. / Thread-safe signals for the OTA downloader."""
+    progress = Signal(int, int)   # bytes_downloaded, total_bytes
+    done = Signal(bool, str)      # ok, message_or_path
+
 APP_VERSION   = "2.0.7"
 APP_NAME      = "VRCMT — VRChat Media Tracker"
 APP_AUTHOR    = "DoctorLatex"
@@ -112,6 +118,19 @@ class InstructionsModal(QFrame):
              "4. Si no lo encuentra: guardar solo el título extraído del enlace.<br><br>"
              "Todo esto ocurre en segundo plano sin interrumpir tu experiencia en VRChat."),
 
+            # ── Marca automática como visto ─────────────────────────────────
+            ("✅ Marcado automático como visto (regla del 90%)",
+             "VRCMT registra cuánto tiempo llevas reproduciendo cada contenido en VRChat.<br><br>"
+             "Si llevas visto el <b>90% o más de la duración total</b> del video, "
+             "la app lo marca automáticamente como <i>Visto</i> en tu catálogo.<br><br>"
+             "• La duración real se obtiene del log de VRChat cuando el reproductor informa "
+             "<i>«Media Ready»</i>.<br>"
+             "• Si no hay duración disponible, se usa un umbral mínimo de <b>12 minutos</b> "
+             "continuos como referencia.<br>"
+             "• Los eventos de pausa y reanudación se detectan automáticamente desde los logs.<br>"
+             "• El progreso se guarda cada 30 segundos y también al detenerse el video.<br><br>"
+             "También puedes marcarlo manualmente usando el botón <b>⭕ Marcar Visto</b> en la ficha."),
+
             # ── Fichas de contenido ─────────────────────────────────────────
             ("🃏 ¿Qué puedo hacer en la ficha de un título?",
              "Al hacer clic en cualquier tarjeta del catálogo se abre su <b>ficha detallada</b> "
@@ -119,11 +138,44 @@ class InstructionsModal(QFrame):
              "• <b>Ver el póster</b>, sinopsis, año, géneros, director y elenco (si TMDB lo encontró).<br>"
              "• <b>Dar una calificación</b> personal (1–10) con las estrellas.<br>"
              "• <b>Escribir notas</b> propias sobre ese título.<br>"
-             "• <b>Abrir el enlace</b> de reproducción directamente en el reproductor interno "
-             "(solo Premium para contenido privado).<br>"
+             "• <b>Abrir el enlace</b> de reproducción directamente en el reproductor interno.<br>"
+             "• <b>Descargar el video</b> a tu PC (solo para YouTube, Twitch, Vimeo y plataformas públicas) "
+             "usando el botón <b>⬇️ Descargar</b> en el reproductor.<br>"
              "• <b>Corregir el contenido</b> si la detección fue incorrecta usando el botón "
              "<b>🔧 Fix</b>.<br>"
-             "• <b>Eliminar</b> el registro si no quieres que aparezca en tu catálogo."),
+             "• <b>Eliminar</b> el registro si no quieres que aparezca en tu catálogo.<br><br>"
+             "ℹ️ El botón <b>Marcar Anime</b> solo aparece en contenido detectado como película "
+             "o serie (no en videos públicos de YouTube/Twitch/Kick)."),
+
+            # ── Reproductor Premium ─────────────────────────────────────────
+            ("📺 Reproductor VRCMT (Premium)",
+             "El reproductor interno VRCMT (disponible en <i>Herramientas Premium</i>) permite "
+             "ver cualquier video directamente desde la app, sin abrir VRChat:<br><br>"
+             "• <b>Motor nativo</b> con proxy de sigilo para evitar restricciones de CDN.<br>"
+             "• <b>Velocidad de reproducción</b> ajustable (0.75× — 2×).<br>"
+             "• <b>Pantalla completa</b> con ocultado automático de controles.<br>"
+             "• <b>Copiar URL</b> para compartir el enlace fácilmente.<br>"
+             "• <b>⬇️ Descargar</b> — para YouTube, Twitch, Vimeo y otras plataformas públicas, "
+             "descarga el archivo MP4 directamente a tu PC usando yt-dlp. "
+             "Puedes añadir cookies exportadas desde tu navegador en "
+             "<i>Ajustes → YouTube en VRChat → Opciones avanzadas</i> para descargar "
+             "contenido con restricción de edad."),
+
+            # ── YouTube en VRChat (Stub) ────────────────────────────────────
+            ("📺 YouTube en VRChat — Mejora del reproductor",
+             "VRChat usa un pequeño programa interno (<i>yt-dlp</i>) para abrir videos de YouTube. "
+             "La sección <b>«YouTube en VRChat»</b> en Ajustes te permite reemplazarlo por una "
+             "versión más reciente con soporte de cookies.<br><br>"
+             "<b>Pasos para activar:</b><br>"
+             "1. Cierra VRChat completamente.<br>"
+             "2. En Ajustes, activa la casilla <b>«Activar mejora de YouTube para VRChat»</b>.<br>"
+             "3. Haz clic en <b>«⬇️ Instalar / Actualizar desde internet»</b>.<br>"
+             "4. Abre VRChat — los videos de YouTube deberían funcionar mejor.<br><br>"
+             "<b>Cookies (opcional):</b> en <i>Opciones avanzadas</i> puedes añadir un archivo "
+             "de cookies exportado con la extensión <i>«Get cookies.txt»</i> de tu navegador. "
+             "Necesario para videos con restricción de edad o contenido privado.<br><br>"
+             "<b>Quitar la mejora:</b> haz clic en <b>«↩️ Quitar mejora»</b> para volver al "
+             "yt-dlp original de VRChat."),
 
             # ── Detección y cómo mejorarla ──────────────────────────────────
             ("⚠️ Limitaciones de la detección automática",
@@ -461,19 +513,38 @@ class AboutView(QWidget):
             webbrowser.open(GITHUB_RELEASES)
             return
 
+        # Confirmación antes de descargar — evita que el usuario piense que es un crash
+        # Confirmation before downloading — prevents user from thinking it's a crash
+        confirm = QMessageBox.question(
+            self,
+            "Instalar actualización",
+            f"Se descargará la nueva versión de VRCMT.\n\n"
+            f"⚠️ La app se cerrará automáticamente al finalizar la descarga,\n"
+            f"se reemplazará el ejecutable y se reabrirá sola.\n\n"
+            f"¿Continuar?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes,
+        )
+        if confirm != QMessageBox.Yes:
+            return
+
         self._btn_install_update.setEnabled(False)
         self._btn_install_update.setText("⏳  Descargando...")
         self._update_progress.setVisible(True)
         self._update_progress.setValue(0)
 
-        def on_progress(downloaded: int, total: int) -> None:
+        # Usar señales Qt para garantizar que los callbacks se ejecuten en el hilo GUI
+        # Use Qt signals to guarantee callbacks run on the GUI thread
+        self._ota_signals = _OTASignals()
+
+        def _on_progress_slot(downloaded: int, total: int) -> None:
             if total > 0:
                 pct = int(downloaded * 100 / total)
                 self._update_progress.setValue(pct)
                 mb = downloaded / 1_048_576
                 self._btn_install_update.setText(f"⏳  Descargando… {mb:.0f} MB")
 
-        def on_done(ok: bool, msg: str) -> None:
+        def _on_done_slot(ok: bool, msg: str) -> None:
             if ok:
                 self._btn_install_update.setText("✅  Instalando y reiniciando…")
                 apply_update_and_restart(msg)
@@ -487,5 +558,16 @@ class AboutView(QWidget):
                     "Puedes descargarla manualmente desde GitHub."
                 )
                 webbrowser.open(GITHUB_RELEASES)
+
+        # QueuedConnection garantiza que los slots corran en el hilo principal (GUI)
+        # QueuedConnection guarantees slots run on the main (GUI) thread
+        self._ota_signals.progress.connect(_on_progress_slot, Qt.ConnectionType.QueuedConnection)
+        self._ota_signals.done.connect(_on_done_slot, Qt.ConnectionType.QueuedConnection)
+
+        def on_progress(downloaded: int, total: int) -> None:
+            self._ota_signals.progress.emit(downloaded, total)
+
+        def on_done(ok: bool, msg: str) -> None:
+            self._ota_signals.done.emit(ok, msg)
 
         download_update(on_progress=on_progress, on_done=on_done)

@@ -933,7 +933,9 @@ class SettingsView(QWidget):
             self.on_stub_refresh_status()
 
         w = StubManifestWorker(self.engine, force=False)
-        w.signals.finished.connect(done)
+        # QueuedConnection: el slot 'done' corre en el hilo GUI, no en el worker
+        # QueuedConnection: 'done' slot runs on GUI thread, not worker thread
+        w.signals.finished.connect(done, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(w)
 
     def on_stub_install_file(self):
@@ -955,7 +957,7 @@ class SettingsView(QWidget):
             self.on_stub_refresh_status()
 
         w = StubInstallFileWorker(self.engine, path)
-        w.signals.finished.connect(done)
+        w.signals.finished.connect(done, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(w)
 
     def on_stub_restore(self):
@@ -997,10 +999,11 @@ class SettingsView(QWidget):
             logging.error("Error aplicando tema: %s", e)
 
     def on_save_general(self):
-        new_lang = self.lang_combo.currentText()
-        old_lang = self.engine.config.get_val('language', 'Español')
-        
-        self.engine.config.save_config('language', new_lang)
+        # El idioma solo se cambia desde el botón "Aplicar" dedicado (on_apply_lang).
+        # Guardar el idioma actualmente en uso, no el que muestra el combo (que es el "otro").
+        # Language is only changed via the dedicated "Apply" button (on_apply_lang).
+        # Save the currently active language, not the one shown in the combo (which is the "other").
+        self.engine.config.save_config('language', self.current_app_lang)
         self.engine.config.save_config('tmdb_api_key', self.api_input.text().strip())
         self.engine.config.save_config('log_dir', self.log_input.text().strip())
         # P4: Guardar URL OTA si fue modificada / Save OTA URL if changed
@@ -1008,12 +1011,11 @@ class SettingsView(QWidget):
             ota_val = self.ota_url_input.text().strip()
             self.engine.config.save_config('ota_url', ota_val)
         
-        if new_lang != old_lang:
-            QMessageBox.information(self, self.engine.config.tr('lbl_success', "Configuración Guardada"), 
-                                  self.engine.config.tr('msg_restart_required', "Idioma cambiado. Por favor, reinicia la aplicación para aplicar todos los cambios visuales."))
-        else:
-            QMessageBox.information(self, self.engine.config.tr('lbl_success', "Configuración Guardada"), 
-                                  self.engine.config.tr('msg_save_success', "Los cambios han sido guardados exitosamente."))
+        QMessageBox.information(
+            self,
+            self.engine.config.tr('lbl_success', "Configuración Guardada"),
+            self.engine.config.tr('msg_save_success', "Los cambios han sido guardados exitosamente."),
+        )
 
     def on_export(self):
         path = self.backup_manager.export_full_backup(is_premium=getattr(self.engine, 'is_premium', False))
@@ -1110,7 +1112,7 @@ class SettingsView(QWidget):
                 QMessageBox.critical(self, self.engine.config.tr('lbl_error', "Error"), self.engine.config.tr('msg_cloud_error', message))
                 
         self._upload_worker = CloudUploadWorker(self.engine, self.backup_manager, discord_id)
-        self._upload_worker.signals.finished.connect(on_finished)
+        self._upload_worker.signals.finished.connect(on_finished, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(self._upload_worker)
 
     def on_cloud_download(self):
@@ -1136,7 +1138,7 @@ class SettingsView(QWidget):
                 QMessageBox.warning(self, self.engine.config.tr('lbl_cloud_notice', "Aviso de Nube"), self.engine.config.tr('msg_cloud_error', message))
                 
         self._download_worker = CloudDownloadWorker(self.engine, self.backup_manager, discord_id)
-        self._download_worker.signals.finished.connect(on_finished)
+        self._download_worker.signals.finished.connect(on_finished, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(self._download_worker)
 
     # F4: Exportar catálogo como CSV / Export catalog as CSV ----------------------

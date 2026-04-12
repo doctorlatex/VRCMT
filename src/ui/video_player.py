@@ -13,11 +13,18 @@ import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, 
-                             QLabel, QSlider, QFrame, QWidget, QStackedWidget, QLineEdit)
+                             QLabel, QSlider, QFrame, QWidget, QStackedWidget, QLineEdit,
+                             QFileDialog, QProgressDialog, QMessageBox)
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
-from PySide6.QtCore import Qt, QUrl, QTimer, Slot, QEvent
+from PySide6.QtCore import Qt, QUrl, QTimer, Slot, QEvent, Signal, QObject
+
+
+# Señales thread-safe para descarga de video / Thread-safe signals for video download
+class _DownloadSignals(QObject):
+    progress = Signal(int, int, str)  # downloaded, total, speed_str
+    done = Signal(bool, str)          # ok, path_or_error_msg
 
 # Desactivar advertencias de SSL para el proxy
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -348,11 +355,26 @@ class VRCMTPlayer(QDialog):
         self.btn_fs = QPushButton("🔲")
         self.btn_fs.clicked.connect(self.toggle_fullscreen)
         self.btn_speed = QPushButton("1.00x")
-        self.btn_speed.setToolTip("Cambiar velocidad de reproducción")
+        self.btn_speed.setToolTip("Cambiar velocidad de reproducción / Change playback speed")
         self.btn_speed.clicked.connect(self._cycle_speed)
         self.btn_copy_url = QPushButton("📋 URL")
-        self.btn_copy_url.setToolTip("Copiar URL actual")
+        self.btn_copy_url.setToolTip("Copiar URL actual / Copy current URL")
         self.btn_copy_url.clicked.connect(self._copy_current_url)
+
+        # Botón descargar — visible solo para URLs de plataformas públicas
+        # Download button — visible only for public platform URLs
+        self.btn_download = QPushButton("⬇️ Descargar")
+        self.btn_download.setToolTip(
+            "Descargar este video a tu PC usando yt-dlp\n"
+            "Download this video to your PC using yt-dlp"
+        )
+        self.btn_download.setStyleSheet(
+            "QPushButton { background-color: #1a3a1a; color: #81c784; border: 1px solid #2e7d32; }"
+            "QPushButton:hover { background-color: #2e7d32; color: white; }"
+            "QPushButton:disabled { background-color: #1a1a1a; color: #444; border-color: #333; }"
+        )
+        self.btn_download.setVisible(False)
+        self.btn_download.clicked.connect(self._on_download)
 
         self.lbl_title_display = QLabel(f"🎬 {self.media_title}")
         self.lbl_title_display.setStyleSheet("font-weight: 700; color: #ffca28; font-size: 12px;")
@@ -366,6 +388,7 @@ class VRCMTPlayer(QDialog):
         btns_l.addSpacing(8)
         btns_l.addWidget(self.btn_speed)
         btns_l.addWidget(self.btn_copy_url)
+        btns_l.addWidget(self.btn_download)
         btns_l.addStretch()
         btns_l.addWidget(self.lbl_title_display)
         btns_l.addStretch()
@@ -418,7 +441,23 @@ class VRCMTPlayer(QDialog):
         self.player.playbackStateChanged.connect(self._on_state_changed)
         self.player.setPlaybackRate(1.0)
 
+    def _is_downloadable_url(self, url: str) -> bool:
+        """Retorna True si la URL es de una plataforma pública descargable con yt-dlp.
+        Returns True if the URL is from a public platform downloadable with yt-dlp."""
+        _PUBLIC = ('youtube.com', 'youtu.be', 'twitch.tv', 'kick.com',
+                   'soundcloud.com', 'music.youtube.com', 'vimeo.com',
+                   'dailymotion.com', 'tiktok.com')
+        u = (url or "").lower()
+        return any(h in u for h in _PUBLIC)
+
     def load_media(self):
+        # Mostrar/ocultar botón de descarga según la URL
+        # Show/hide download button based on URL
+        is_dl = self._is_downloadable_url(self.url)
+        if hasattr(self, 'btn_download'):
+            self.btn_download.setVisible(is_dl)
+            self.btn_download.setEnabled(is_dl)
+
         u = self.url.lower()
         if "youtube.com" in u or "youtu.be" in u:
             # [ES] YouTube puede bloquear embeds (Error 153). Intentar stream directo primero.
@@ -573,6 +612,126 @@ class VRCMTPlayer(QDialog):
         m, s = divmod(int(seconds), 60)
         h, m = divmod(m, 60)
         return f"{h:02d}:{m:02d}:{s:02d}" if h > 0 else f"{m:02d}:{s:02d}"
+
+    def _on_download(self):
+        """Descarga el video actual usando yt-dlp a una carpeta elegida por el usuario.
+        Downloads the current video using yt-dlp to a user-chosen folder."""
+        try:
+            import yt_dlp  # type: ignore
+        except ImportError:
+            QMessageBox.warning(
+                self, "yt-dlp no disponible",
+                "yt-dlp no está disponible en este entorno.\n"
+                "Descarga el video manualmente desde la plataforma original."
+            )
+            return
+
+        if not self.url:
+            QMessageBox.information(self, "Sin URL", "No hay URL cargada para descargar.")
+            return
+
+        # Elegir carpeta de destino / Choose destination folder
+        dest_dir = QFileDialog.getExistingDirectory(
+            self,
+            "Elegir carpeta de descarga / Choose download folder",
+            os.path.expanduser("~/Downloads"),
+        )
+        if not dest_dir:
+            return
+
+        self.btn_download.setEnabled(False)
+        self.btn_download.setText("⏳ Descargando…")
+
+        # Señales thread-safe para actualizar la UI / Thread-safe signals to update UI
+        self._dl_signals = _DownloadSignals()
+
+        def _on_progress_slot(downloaded: int, total: int, speed: str) -> None:
+            if total > 0:
+                pct = int(downloaded * 100 / total)
+                self.btn_download.setText(f"⬇️ {pct}% {speed}")
+            else:
+                self.btn_download.setText(f"⬇️ {speed}")
+
+        def _on_done_slot(ok: bool, msg: str) -> None:
+            self.btn_download.setEnabled(True)
+            self.btn_download.setText("⬇️ Descargar")
+            if ok:
+                QMessageBox.information(
+                    self, "✅ Descarga completa",
+                    f"Video guardado en:\n{msg}"
+                )
+                import subprocess
+                try:
+                    subprocess.Popen(f'explorer /select,"{os.path.abspath(msg)}"')
+                except Exception:
+                    pass
+            else:
+                QMessageBox.warning(
+                    self, "Error de descarga",
+                    f"No se pudo descargar el video:\n{msg}"
+                )
+
+        self._dl_signals.progress.connect(_on_progress_slot, Qt.ConnectionType.QueuedConnection)
+        self._dl_signals.done.connect(_on_done_slot, Qt.ConnectionType.QueuedConnection)
+
+        url_to_dl = self.url
+
+        def _download_thread():
+            try:
+                _sigs = self._dl_signals
+
+                def _progress_hook(d):
+                    try:
+                        status = d.get("status", "")
+                        if status == "downloading":
+                            downloaded = int(d.get("downloaded_bytes", 0))
+                            total = int(d.get("total_bytes") or d.get("total_bytes_estimate") or 0)
+                            speed_raw = d.get("speed") or 0
+                            if speed_raw >= 1_000_000:
+                                speed_str = f"{speed_raw/1_000_000:.1f}MB/s"
+                            elif speed_raw >= 1_000:
+                                speed_str = f"{speed_raw/1_000:.0f}KB/s"
+                            else:
+                                speed_str = ""
+                            _sigs.progress.emit(downloaded, total, speed_str)
+                    except Exception:
+                        pass
+
+                ydl_opts = {
+                    "outtmpl": os.path.join(dest_dir, "%(title)s.%(ext)s"),
+                    "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+                    "quiet": True,
+                    "no_warnings": True,
+                    "noplaylist": True,
+                    "progress_hooks": [_progress_hook],
+                    "merge_output_format": "mp4",
+                }
+                # Añadir cookies si están configuradas / Add cookies if configured
+                if self.engine:
+                    cookies_path = self.engine.config.get_val("vrchat_stub_cookies_path", "") or ""
+                    if cookies_path and os.path.isfile(cookies_path):
+                        ydl_opts["cookiefile"] = cookies_path
+
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url_to_dl, download=True)
+                    if info:
+                        # Obtener la ruta final del archivo descargado
+                        # Get the final path of the downloaded file
+                        filename = ydl.prepare_filename(info)
+                        # Puede que yt-dlp haya cambiado la extensión tras el merge
+                        for ext in ['.mp4', '.mkv', '.webm', '.m4a', '.mp3']:
+                            candidate = os.path.splitext(filename)[0] + ext
+                            if os.path.isfile(candidate):
+                                filename = candidate
+                                break
+                        _sigs.done.emit(True, filename)
+                    else:
+                        _sigs.done.emit(False, "No se pudo obtener información del video")
+            except Exception as e:
+                logging.error("Download error: %s", e)
+                self._dl_signals.done.emit(False, str(e))
+
+        threading.Thread(target=_download_thread, daemon=True, name="VRCMT-Download").start()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape and self.isFullScreen(): self.toggle_fullscreen()
