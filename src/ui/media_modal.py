@@ -583,35 +583,12 @@ class MediaModal(QFrame):
         self._nam = QNetworkAccessManager(self)
         self._poster_reply = None
         
-        self.setStyleSheet("""
-            QFrame#MediaModalShell, QFrame#ModalMain { background-color: #080808; color: #eee; border-radius: 20px; border: 1px solid #222; }
-            QLabel#Title { font-size: 28px; font-weight: bold; color: #fff; }
-            QLabel#Meta { font-size: 14px; color: #888; margin-bottom: 10px; }
-            QLabel#SectionTitle { font-size: 15px; font-weight: bold; color: #1f6aa5; margin-top: 15px; text-transform: uppercase; }
-            
-            QTextEdit { background-color: #121212; border: 1px solid #222; border-radius: 10px; color: #bbb; padding: 12px; }
-            QLineEdit { 
-                background-color: #121212; border: 1px solid #222; border-radius: 6px; 
-                color: #fff; padding: 10px; min-height: 35px; font-size: 15px;
-            }
-            QLineEdit:focus { border: 1px solid #1f6aa5; background-color: #1a1a1a; }
-            
-            QPushButton#ActionButton { background-color: #1f6aa5; color: white; border-radius: 10px; font-weight: bold; height: 38px; font-size: 13px; }
-            QPushButton#ActionButton:hover { background-color: #2980b9; }
-            
-            QPushButton#SecondaryButton { background-color: #1a1a1a; color: #aaa; border-radius: 8px; height: 35px; border: 1px solid #252525; font-size: 12px; }
-            QPushButton#SecondaryButton:hover { background-color: #222; color: #fff; }
-            
-            QPushButton#DeleteButton { background-color: #421010; color: #ff5252; border-radius: 8px; font-weight: bold; height: 35px; font-size: 12px; }
-            QPushButton#DeleteButton:hover { background-color: #c62828; color: white; }
-            
-            QPushButton#CloseButton { background-color: #1a1a1a; color: #888; border-radius: 17px; font-weight: bold; font-size: 16px; border: 1px solid #252525; }
-            QPushButton#CloseButton:hover { background-color: #c62828; color: white; }
-
-            QScrollBar:vertical { border: none; background: #080808; width: 8px; margin: 0px; }
-            QScrollBar::handle:vertical { background: #222; min-height: 20px; border-radius: 4px; }
-            QScrollBar::handle:vertical:hover { background: #1f6aa5; }
-        """)
+        try:
+            from src.core.themes import get_modal_stylesheet as _gms
+            _active_theme = engine.config.get_val('theme', 'Oscuro') if engine else 'Oscuro'
+            self.setStyleSheet(_gms(_active_theme))
+        except Exception:
+            pass
 
         self.setup_ui()
         self.connect_actions()
@@ -706,6 +683,13 @@ class MediaModal(QFrame):
         text = self.engine.config.tr(key, default)
         if text.endswith(':'): return text[:-1]
         return text
+
+    def _theme_name(self) -> str:
+        """Devuelve el nombre del tema activo para estilizar elementos inline."""
+        try:
+            return self.engine.config.get_val('theme', 'Oscuro') or 'Oscuro'
+        except Exception:
+            return 'Oscuro'
 
     def _tipo_stream_imagen_ui(self):
         return _tipo_normalizado_es_stream_imagen(getattr(self.item, "tipo_contenido", None))
@@ -835,50 +819,12 @@ class MediaModal(QFrame):
         # Chapters tab fills full available height for better episode visibility.
         self.detail_tabs = QTabWidget()
         self.detail_tabs.setDocumentMode(False)
-        self.detail_tabs.setStyleSheet("""
-            /* Contenedor del panel activo */
-            QTabWidget::pane {
-                background: #111418;
-                border: 1px solid #2a2d35;
-                border-top: none;
-                border-radius: 0 0 10px 10px;
-            }
-
-            /* Barra de pestañas */
-            QTabBar {
-                qproperty-drawBase: 0;
-            }
-            QTabBar::tab {
-                background: #0d1017;
-                color: #6b7280;
-                font-size: 13px;
-                font-weight: 600;
-                padding: 9px 22px 8px 22px;
-                margin-right: 2px;
-                border: 1px solid #2a2d35;
-                border-bottom: none;
-                border-radius: 8px 8px 0 0;
-                min-width: 120px;
-            }
-            QTabBar::tab:first {
-                margin-left: 0;
-            }
-            /* Pestaña activa: color de acento, borde inferior del panel = fondo de pestaña */
-            QTabBar::tab:selected {
-                background: #111418;
-                color: #e0e6f0;
-                font-weight: 700;
-                border-color: #2a2d35;
-                border-bottom: none;
-                /* línea superior de acento */
-                padding-top: 6px;
-                border-top: 3px solid #1f6aa5;
-            }
-            QTabBar::tab:hover:!selected {
-                background: #161b24;
-                color: #9ca3b0;
-            }
-        """)
+        try:
+            from src.core.themes import get_tabs_stylesheet as _gts
+            _active_theme = self.engine.config.get_val('theme', 'Oscuro')
+            self.detail_tabs.setStyleSheet(_gts(_active_theme))
+        except Exception:
+            pass
         right_layout.addWidget(self.detail_tabs, 1)   # stretch=1 → llena el espacio restante
 
         # Tab 1: Detalles / Info
@@ -1890,7 +1836,11 @@ class MediaModal(QFrame):
 
         row = QFrame(self.ver_content)
         row.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
-        row.setStyleSheet("background-color: #1a1a1a; border-radius: 5px;")
+        try:
+            from src.core.themes import get_ep_row_style as _gers
+            row.setStyleSheet(_gers(self._theme_name(), False))
+        except Exception:
+            row.setStyleSheet("background-color: #1a1a1a; border-radius: 5px;")
         row.setMinimumHeight(32)
         rl = QHBoxLayout(row)
         rl.setContentsMargins(8, 4, 8, 4)
@@ -2138,7 +2088,11 @@ class MediaModal(QFrame):
                 row.setFocusPolicy(Qt.FocusPolicy.NoFocus)
                 row.setMinimumHeight(30)
                 is_curr = (ep.id == self.item.id)
-                row.setStyleSheet(f"background-color: {'#252525' if is_curr else '#1a1a1a'}; border-radius: 5px; border: {'1px solid #1f6aa5' if is_curr else 'none'};")
+                try:
+                    from src.core.themes import get_ep_row_style as _gers2
+                    row.setStyleSheet(_gers2(self._theme_name(), is_curr))
+                except Exception:
+                    row.setStyleSheet(f"background-color: {'#252525' if is_curr else '#1a1a1a'}; border-radius: 5px; border: {'1px solid #1f6aa5' if is_curr else 'none'};")
                 rl = QHBoxLayout(row)
                 rl.setContentsMargins(10, 4, 10, 4)
                 ep_lbl = QLabel(f"T.{ep.temporada} Ep.{ep.episodio}")
@@ -2152,11 +2106,15 @@ class MediaModal(QFrame):
                 btn_seen_ep.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
                 btn_seen_ep.setFixedSize(24, 22)
                 btn_seen_ep.setToolTip("Desmarcar visto" if ep_seen else "Marcar como visto")
-                btn_seen_ep.setStyleSheet(
-                    "background-color: #0d3b1e; color: #27ae60; border-radius: 4px; padding: 0px; font-weight: bold;"
-                    if ep_seen else
-                    "background-color: #1a1a1a; color: #555; border-radius: 4px; padding: 0px;"
-                )
+                try:
+                    from src.core.themes import get_ep_seen_btn_style as _gsbs
+                    btn_seen_ep.setStyleSheet(_gsbs(self._theme_name(), ep_seen))
+                except Exception:
+                    btn_seen_ep.setStyleSheet(
+                        "background-color: #0d3b1e; color: #27ae60; border-radius: 4px; padding: 0px; font-weight: bold;"
+                        if ep_seen else
+                        "background-color: #1a1a1a; color: #555; border-radius: 4px; padding: 0px;"
+                    )
                 btn_seen_ep.clicked.connect(lambda _=False, itm=ep, btn=btn_seen_ep: self._toggle_ep_seen(itm, btn))
                 rl.addWidget(btn_seen_ep, 0, Qt.AlignRight | Qt.AlignVCenter)
 
@@ -2240,9 +2198,11 @@ class MediaModal(QFrame):
                 btn.setToolTip("Desmarcar visto")
             else:
                 btn.setText("○")
-                btn.setStyleSheet(
-                    "background-color: #1a1a1a; color: #555; border-radius: 4px; padding: 0px;"
-                )
+                try:
+                    from src.core.themes import get_ep_seen_btn_style as _gsbs2
+                    btn.setStyleSheet(_gsbs2(self._theme_name(), False))
+                except Exception:
+                    btn.setStyleSheet("background-color: #1a1a1a; color: #555; border-radius: 4px; padding: 0px;")
                 btn.setToolTip("Marcar como visto")
         except Exception as e:
             logging.error("Error alternando visto del episodio: %s", e)

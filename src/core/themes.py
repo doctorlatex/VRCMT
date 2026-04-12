@@ -133,6 +133,123 @@ SUNSET_THEME = _build(
     border="#5A2020", scroll_h="#7A3030"
 )
 
+# ── Colores crudos por tema (para stylesheets dinámicos) ─────────────────────
+
+_THEME_COLORS: dict[str, dict] = {
+    "Oscuro":    dict(bg="#0d0d0d", bg2="#161616", bg3="#202020", fg="#f1f3f4", fg2="#9aa0a6", accent="#1f6aa5", accent2="#2980b9", border="#2a2a2a"),
+    "AMOLED":    dict(bg="#000000", bg2="#0a0a0a", bg3="#111111", fg="#f1f3f4", fg2="#9aa0a6", accent="#1f6aa5", accent2="#2980b9", border="#1a1a1a"),
+    "Nord":      dict(bg="#2E3440", bg2="#3B4252", bg3="#434C5E", fg="#ECEFF4", fg2="#D8DEE9", accent="#5E81AC", accent2="#81A1C1", border="#4C566A"),
+    "Dracula":   dict(bg="#282A36", bg2="#21222C", bg3="#373844", fg="#F8F8F2", fg2="#6272A4", accent="#BD93F9", accent2="#9580FF", border="#44475A"),
+    "Monokai":   dict(bg="#272822", bg2="#1e1f1c", bg3="#33342e", fg="#F8F8F2", fg2="#75715E", accent="#A6E22E", accent2="#66D9EF", border="#3E3D32"),
+    "Solarized": dict(bg="#002B36", bg2="#073642", bg3="#0D3A47", fg="#839496", fg2="#657B83", accent="#268BD2", accent2="#2AA198", border="#073642"),
+    "Ocean":     dict(bg="#0A1628", bg2="#0F2240", bg3="#1A3A5C", fg="#BCCFE8", fg2="#7A9ECC", accent="#1E90FF", accent2="#00BFFF", border="#1A3A5C"),
+    "Carbon":    dict(bg="#121212", bg2="#1E1E1E", bg3="#2C2C2C", fg="#E0E0E0", fg2="#9E9E9E", accent="#BB86FC", accent2="#CF6679", border="#383838"),
+    "Cyberpunk": dict(bg="#0D0D0D", bg2="#130D21", bg3="#1E1032", fg="#E0F0FF", fg2="#8080AA", accent="#00FFDD", accent2="#FF00AA", border="#2A1050"),
+    "Rosé Pine": dict(bg="#191724", bg2="#1f1d2e", bg3="#26233a", fg="#e0def4", fg2="#908caa", accent="#c4a7e7", accent2="#ebbcba", border="#393552"),
+    "Bosque":    dict(bg="#0D1F12", bg2="#142A18", bg3="#1E3D24", fg="#D8EDD9", fg2="#7AAF83", accent="#4CAF50", accent2="#66BB6A", border="#2A5230"),
+    "Sunset":    dict(bg="#1A0A0A", bg2="#2A1010", bg3="#3A1818", fg="#FFE4CC", fg2="#CC8866", accent="#FF6B35", accent2="#FF8C42", border="#5A2020"),
+}
+
+
+def get_theme_colors(name: str) -> dict:
+    """Devuelve el diccionario de colores del tema (para generar stylesheets dinámicos)."""
+    return _THEME_COLORS.get(name, _THEME_COLORS["Oscuro"])
+
+
+def get_modal_stylesheet(theme_name: str) -> str:
+    """Genera el stylesheet del MediaModal usando los colores del tema activo."""
+    c = get_theme_colors(theme_name)
+    bg, bg2, bg3 = c["bg"], c["bg2"], c["bg3"]
+    fg, fg2 = c["fg"], c["fg2"]
+    accent, accent2, border = c["accent"], c["accent2"], c["border"]
+    return f"""
+QFrame#MediaModalShell, QFrame#ModalMain {{
+    background-color: {bg}; color: {fg}; border-radius: 20px; border: 1px solid {border};
+}}
+QLabel {{ background: transparent; color: {fg}; }}
+QLabel#Title {{ font-size: 28px; font-weight: bold; color: {fg}; }}
+QLabel#Meta {{ font-size: 14px; color: {fg2}; margin-bottom: 10px; }}
+QLabel#SectionTitle {{ font-size: 15px; font-weight: bold; color: {accent}; margin-top: 15px; text-transform: uppercase; }}
+QTextEdit {{ background-color: {bg2}; border: 1px solid {border}; border-radius: 10px; color: {fg}; padding: 12px; }}
+QLineEdit {{
+    background-color: {bg2}; border: 1px solid {border}; border-radius: 6px;
+    color: {fg}; padding: 10px; min-height: 35px; font-size: 15px;
+}}
+QLineEdit:focus {{ border: 1px solid {accent}; background-color: {bg3}; }}
+QPushButton#ActionButton {{ background-color: {accent}; color: white; border-radius: 10px; font-weight: bold; height: 38px; font-size: 13px; }}
+QPushButton#ActionButton:hover {{ background-color: {accent2}; }}
+QPushButton#SecondaryButton {{ background-color: {bg2}; color: {fg2}; border-radius: 8px; height: 35px; border: 1px solid {border}; font-size: 12px; }}
+QPushButton#SecondaryButton:hover {{ background-color: {bg3}; color: {fg}; }}
+QPushButton#DeleteButton {{ background-color: #421010; color: #ff5252; border-radius: 8px; font-weight: bold; height: 35px; font-size: 12px; }}
+QPushButton#DeleteButton:hover {{ background-color: #c62828; color: white; }}
+QPushButton#CloseButton {{ background-color: {bg2}; color: {fg2}; border-radius: 17px; font-weight: bold; font-size: 16px; border: 1px solid {border}; }}
+QPushButton#CloseButton:hover {{ background-color: #c62828; color: white; }}
+QScrollBar:vertical {{ border: none; background: {bg}; width: 8px; margin: 0px; }}
+QScrollBar::handle:vertical {{ background: {border}; min-height: 20px; border-radius: 4px; }}
+QScrollBar::handle:vertical:hover {{ background: {accent}; }}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
+"""
+
+
+def get_tabs_stylesheet(theme_name: str) -> str:
+    """Genera el stylesheet del QTabWidget del modal usando los colores del tema activo."""
+    c = get_theme_colors(theme_name)
+    bg, bg2, bg3 = c["bg"], c["bg2"], c["bg3"]
+    fg, fg2 = c["fg"], c["fg2"]
+    accent, border = c["accent"], c["border"]
+    return f"""
+QTabWidget::pane {{
+    background: {bg2};
+    border: 1px solid {border};
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+}}
+QTabBar {{ qproperty-drawBase: 0; }}
+QTabBar::tab {{
+    background: {bg};
+    color: {fg2};
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 22px 8px 22px;
+    margin-right: 2px;
+    border: 1px solid {border};
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    min-width: 120px;
+}}
+QTabBar::tab:first {{ margin-left: 0; }}
+QTabBar::tab:selected {{
+    background: {bg2};
+    color: {fg};
+    font-weight: 700;
+    border-color: {border};
+    border-bottom: none;
+    padding-top: 6px;
+    border-top: 3px solid {accent};
+}}
+QTabBar::tab:hover:!selected {{
+    background: {bg3};
+    color: {fg};
+}}
+"""
+
+
+def get_ep_row_style(theme_name: str, is_current: bool = False) -> str:
+    """Estilo para las filas de episodios/versiones en el modal."""
+    c = get_theme_colors(theme_name)
+    if is_current:
+        return f"background-color: {c['bg3']}; border-radius: 5px; border: 1px solid {c['accent']};"
+    return f"background-color: {c['bg2']}; border-radius: 5px; border: none;"
+
+
+def get_ep_seen_btn_style(theme_name: str, seen: bool) -> str:
+    """Estilo para el botón de visto/no-visto en filas de episodios."""
+    c = get_theme_colors(theme_name)
+    if seen:
+        return "background-color: #0d3b1e; color: #27ae60; border-radius: 4px; padding: 0px; font-weight: bold;"
+    return f"background-color: {c['bg2']}; color: {c['fg2']}; border-radius: 4px; padding: 0px;"
+
+
 # ── Registro de temas ─────────────────────────────────────────────────────────
 
 _THEMES = {
