@@ -311,13 +311,14 @@ class _ToolPanel(QScrollArea):
             vl.addWidget(b)
 
         vl.addSpacing(6)
-        vl.addWidget(QLabel("INTELIGENCIA ARTIFICIAL"))
+        # Sección IA: solo se muestra si rembg está instalado (no disponible en exe compilado).
+        # AI section: only shown if rembg is installed (not available in compiled exe).
+        self._lbl_ia_section = QLabel("INTELIGENCIA ARTIFICIAL")
         self.btn_rembg = _tool_btn("✂️ Quitar Fondo (IA)", "#1a3050")
-        if not _rembg_available():
-            self.btn_rembg.setToolTip(
-                "Requiere: pip install \"rembg[cpu]\"\n"
-                "Herramienta de eliminación de fondo con IA."
-            )
+        _rembg_ok = _rembg_available()
+        self._lbl_ia_section.setVisible(_rembg_ok)
+        self.btn_rembg.setVisible(_rembg_ok)
+        vl.addWidget(self._lbl_ia_section)
         vl.addWidget(self.btn_rembg)
 
         vl.addSpacing(10)
