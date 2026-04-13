@@ -44,22 +44,23 @@ Write-Host "`n[3/4] Actualizando version.txt en GitHub (solo version, sin codigo
 
 # Obtener SHA actual del archivo version.txt en el repo publico (puede no existir aun)
 $contentB64 = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Version))
-$repoFile = gh api repos/doctorlatex/VRCMT/contents/version.txt 2>$null | ConvertFrom-Json
+# Siempre operar sobre la rama 'master' donde vive version.txt para OTA
+$repoFile = gh api "repos/doctorlatex/VRCMT/contents/version.txt?ref=master" 2>$null | ConvertFrom-Json
 if ($repoFile -and $repoFile.sha) {
-    # Archivo existe -> actualizar con SHA
     gh api repos/doctorlatex/VRCMT/contents/version.txt `
         --method PUT `
         -f message="release: v$Version" `
         -f content=$contentB64 `
-        -f sha=$repoFile.sha | Out-Null
-    Write-Host "OK - version.txt actualizado a $Version en GitHub"
+        -f sha=$repoFile.sha `
+        -f branch=master | Out-Null
+    Write-Host "OK - master/version.txt actualizado a $Version en GitHub"
 } else {
-    # Archivo no existe -> crearlo
     gh api repos/doctorlatex/VRCMT/contents/version.txt `
         --method PUT `
         -f message="release: v$Version" `
-        -f content=$contentB64 | Out-Null
-    Write-Host "OK - version.txt creado con v$Version en GitHub"
+        -f content=$contentB64 `
+        -f branch=master | Out-Null
+    Write-Host "OK - master/version.txt creado con v$Version en GitHub"
 }
 
 # ----- 5. Crear/actualizar GitHub release -----
