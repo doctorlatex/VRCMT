@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QTextEdit, QFrame, QScrollArea, QWidget, QLineEdit,
                              QSlider, QGridLayout, QMessageBox, QTabWidget, QSizePolicy)
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QThreadPool, QRunnable, QByteArray, QObject
-from PySide6.QtGui import QPixmap, QImage, QPainter, QCursor
+from PySide6.QtGui import QPixmap, QImage, QPainter, QCursor, QFont
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from PySide6.QtCore import QUrl
 import logging
@@ -718,28 +718,21 @@ class MediaModal(QFrame):
         
         outer_l = QVBoxLayout(self.main_frame)
         
-        # Top Close Button — estilo fijo independiente del tema para garantizar visibilidad
+        # Top Close Button
         top_row = QHBoxLayout()
+        top_row.setContentsMargins(0, 6, 10, 0)
         top_row.addStretch()
-        self.btn_close = QPushButton("✕")
-        self.btn_close.setFixedSize(36, 36)
+        self.btn_close = QPushButton("Cerrar  ✕")
+        self.btn_close.setFixedSize(100, 32)
         self.btn_close.setObjectName("CloseButton")
-        self.btn_close.setStyleSheet("""
-            QPushButton {
-                background: rgba(255,255,255,0.08);
-                color: rgba(255,255,255,0.75);
-                border-radius: 18px;
-                font-size: 17px;
-                font-weight: bold;
-                border: 1px solid rgba(255,255,255,0.18);
-            }
-            QPushButton:hover {
-                background: #e53935;
-                color: white;
-                border-color: #e53935;
-            }
-            QPushButton:pressed { background: #b71c1c; }
-        """)
+        self.btn_close.setCursor(Qt.PointingHandCursor)
+        self.btn_close.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        self.btn_close.setStyleSheet(
+            "QPushButton{background:#3d3d3d;color:#ffffff;border-radius:8px;"
+            "border:1px solid #666;padding:0 10px;}"
+            "QPushButton:hover{background:#e53935;color:#ffffff;border-color:#e53935;}"
+            "QPushButton:pressed{background:#b71c1c;}"
+        )
         top_row.addWidget(self.btn_close)
         outer_l.addLayout(top_row)
 
@@ -1883,48 +1876,40 @@ class MediaModal(QFrame):
         url_lbl.setToolTip(ver.url)
         rl.addWidget(url_lbl, 1)
 
-        # Botón Copiar — visible para premium, y también para imágenes (contenido libre)
-        btn_copy = QPushButton("🔗", row)
-        btn_copy.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
-        btn_copy.setFixedSize(30, 26)
+        def _mk_row_btn(label, parent, bg, bg_hover, fg="#ffffff", w=58, h=26):
+            """Crea un botón de fila con texto claro y tamaño adecuado."""
+            b = QPushButton(label, parent)
+            b.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
+            b.setFixedSize(w, h)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+            b.setStyleSheet(
+                f"QPushButton{{background:{bg};color:{fg};border-radius:5px;"
+                f"border:1px solid {bg_hover};}}"
+                f"QPushButton:hover{{background:{bg_hover};color:#fff;}}"
+                f"QPushButton:disabled{{background:#252525;color:#444;border-color:#333;}}"
+            )
+            return b
+
+        # Botón Copiar
+        btn_copy = _mk_row_btn("Copiar", row, "#3a3a3a", "#555555")
         btn_copy.setToolTip(self.engine.config.tr('btn_copy_link', "Copiar Link"))
-        btn_copy.setStyleSheet("""
-            QPushButton { background: rgba(255,255,255,0.08); color: #aaa;
-                          border-radius: 5px; border: 1px solid rgba(255,255,255,0.1); font-size: 13px; }
-            QPushButton:hover { background: rgba(255,255,255,0.16); color: #fff; }
-        """)
         btn_copy.clicked.connect(lambda: self._on_copy_link(ver.url))
         btn_copy.setVisible(is_premium or is_image_url)
         rl.addWidget(btn_copy)
 
-        # Botón Reproducir/Ver imagen — visible para premium y también para imágenes
-        _play_icon = "👁" if is_image_url else "▶"
-        _play_tip  = "Ver imagen en el visor" if is_image_url else "Reproducir en el reproductor"
-        btn_play = QPushButton(_play_icon, row)
-        btn_play.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
-        btn_play.setFixedSize(30, 26)
+        # Botón Reproducir/Ver imagen
+        _play_label = "Ver" if is_image_url else "Play"
+        _play_tip   = "Ver imagen en el visor" if is_image_url else "Reproducir en el reproductor"
+        btn_play = _mk_row_btn(_play_label, row, "#1a3d1a", "#27ae60")
         btn_play.setEnabled(False)
         btn_play.setToolTip(_play_tip)
         btn_play.setVisible(is_premium or is_image_url)
-        btn_play.setStyleSheet("""
-            QPushButton { background: rgba(255,255,255,0.05); color: #555;
-                          border-radius: 5px; border: 1px solid rgba(255,255,255,0.06); font-size: 14px; }
-            QPushButton:enabled { background: #27ae60; color: white; border-color: #27ae60; }
-            QPushButton:enabled:hover { background: #2ecc71; border-color: #2ecc71; }
-            QPushButton:disabled { background: rgba(255,255,255,0.04); color: #444; }
-        """)
         rl.addWidget(btn_play)
 
         # Botón Eliminar Link
-        btn_del_link = QPushButton("✕", row)
-        btn_del_link.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
-        btn_del_link.setFixedSize(30, 26)
+        btn_del_link = _mk_row_btn("Borrar", row, "#3d1a1a", "#c62828", fg="#ffaaaa")
         btn_del_link.setToolTip(self.engine.config.tr('btn_delete_link', "Eliminar este enlace"))
-        btn_del_link.setStyleSheet("""
-            QPushButton { background: rgba(198,40,40,0.25); color: #ef9a9a;
-                          border-radius: 5px; border: 1px solid rgba(198,40,40,0.4); font-size: 12px; font-weight: bold; }
-            QPushButton:hover { background: #c62828; color: white; border-color: #c62828; }
-        """)
         btn_del_link.clicked.connect(lambda: self._on_delete_link(ver))
         rl.addWidget(btn_del_link)
 
@@ -1940,6 +1925,10 @@ class MediaModal(QFrame):
                 url_lbl.setStyleSheet("color: #4dabf5; font-size: 11px;")
                 btn_play.setVisible(True)
                 btn_play.setEnabled(True)
+                btn_play.setStyleSheet(
+                    "QPushButton{background:#27ae60;color:#fff;border-radius:5px;border:1px solid #2ecc71;}"
+                    "QPushButton:hover{background:#2ecc71;}"
+                )
                 btn_copy.setVisible(True)
                 try:
                     btn_play.clicked.disconnect()
@@ -2132,31 +2121,34 @@ class MediaModal(QFrame):
                 rl.addWidget(ep_lbl, 1)
                 # N4: Botón para marcar episodio como visto/no visto
                 ep_seen = bool(getattr(ep, 'estado_visto', 0))
-                btn_seen_ep = QPushButton("✓" if ep_seen else "○")
+                _ep_font = QFont("Segoe UI", 10, QFont.Weight.Bold)
+
+                btn_seen_ep = QPushButton("Visto" if ep_seen else "Ver")
                 btn_seen_ep.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
-                btn_seen_ep.setFixedSize(30, 26)
+                btn_seen_ep.setFixedSize(52, 26)
+                btn_seen_ep.setCursor(Qt.PointingHandCursor)
+                btn_seen_ep.setFont(_ep_font)
                 btn_seen_ep.setToolTip("Desmarcar visto" if ep_seen else "Marcar como visto")
-                try:
-                    from src.core.themes import get_ep_seen_btn_style as _gsbs
-                    btn_seen_ep.setStyleSheet(_gsbs(self._theme_name(), ep_seen))
-                except Exception:
-                    btn_seen_ep.setStyleSheet(
-                        "background: rgba(39,174,96,0.25); color: #2ecc71; border-radius: 5px; border: 1px solid rgba(39,174,96,0.5); font-weight: bold;"
-                        if ep_seen else
-                        "background: rgba(255,255,255,0.05); color: #666; border-radius: 5px; border: 1px solid rgba(255,255,255,0.08);"
-                    )
+                btn_seen_ep.setStyleSheet(
+                    "QPushButton{background:#1a5c2e;color:#2ecc71;border-radius:5px;border:1px solid #27ae60;}"
+                    "QPushButton:hover{background:#27ae60;color:#fff;}"
+                    if ep_seen else
+                    "QPushButton{background:#2a2a2a;color:#888;border-radius:5px;border:1px solid #444;}"
+                    "QPushButton:hover{background:#3a3a3a;color:#ddd;}"
+                )
                 btn_seen_ep.clicked.connect(lambda _=False, itm=ep, btn=btn_seen_ep: self._toggle_ep_seen(itm, btn))
                 rl.addWidget(btn_seen_ep, 0, Qt.AlignRight | Qt.AlignVCenter)
 
-                btn_del_ep = QPushButton("✕")
+                btn_del_ep = QPushButton("Borrar")
                 btn_del_ep.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
-                btn_del_ep.setFixedSize(30, 26)
+                btn_del_ep.setFixedSize(52, 26)
+                btn_del_ep.setCursor(Qt.PointingHandCursor)
+                btn_del_ep.setFont(_ep_font)
                 btn_del_ep.setToolTip(self.engine.config.tr('btn_delete_ep', "Eliminar capítulo"))
-                try:
-                    from src.core.themes import get_ep_del_btn_style as _gdbs
-                    btn_del_ep.setStyleSheet(_gdbs())
-                except Exception:
-                    btn_del_ep.setStyleSheet("background: rgba(198,40,40,0.2); color: #ef9a9a; border-radius: 5px; border: 1px solid rgba(198,40,40,0.35);")
+                btn_del_ep.setStyleSheet(
+                    "QPushButton{background:#3d1a1a;color:#ffaaaa;border-radius:5px;border:1px solid #8b2222;}"
+                    "QPushButton:hover{background:#c62828;color:#fff;}"
+                )
                 btn_del_ep.clicked.connect(lambda _=False, itm=ep: self._on_delete_episode_item(itm))
                 rl.addWidget(btn_del_ep, 0, Qt.AlignRight | Qt.AlignVCenter)
 
@@ -2224,20 +2216,19 @@ class MediaModal(QFrame):
         try:
             ep_item.estado_visto = 0 if ep_item.estado_visto else 1
             ep_item.save()
-            try:
-                from src.core.themes import get_ep_seen_btn_style as _gsbs3
-                _ts = self._theme_name()
-            except Exception:
-                _gsbs3 = None; _ts = 'Oscuro'
             if ep_item.estado_visto:
-                btn.setText("✓")
-                btn.setStyleSheet(_gsbs3(_ts, True) if _gsbs3 else
-                    "background: rgba(39,174,96,0.25); color: #2ecc71; border-radius: 5px; border: 1px solid rgba(39,174,96,0.5); font-weight: bold;")
+                btn.setText("Visto")
+                btn.setStyleSheet(
+                    "QPushButton{background:#1a5c2e;color:#2ecc71;border-radius:5px;border:1px solid #27ae60;}"
+                    "QPushButton:hover{background:#27ae60;color:#fff;}"
+                )
                 btn.setToolTip("Desmarcar visto")
             else:
-                btn.setText("○")
-                btn.setStyleSheet(_gsbs3(_ts, False) if _gsbs3 else
-                    "background: rgba(255,255,255,0.05); color: #666; border-radius: 5px; border: 1px solid rgba(255,255,255,0.08);")
+                btn.setText("Ver")
+                btn.setStyleSheet(
+                    "QPushButton{background:#2a2a2a;color:#888;border-radius:5px;border:1px solid #444;}"
+                    "QPushButton:hover{background:#3a3a3a;color:#ddd;}"
+                )
                 btn.setToolTip("Marcar como visto")
         except Exception as e:
             logging.error("Error alternando visto del episodio: %s", e)
