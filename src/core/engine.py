@@ -239,21 +239,28 @@ class VRCMTEngine:
                 self.timer.save_to_db()
         threading.Thread(target=auto_save, daemon=True).start()
         
-        # N5: Comprobación OTA en segundo plano (5 s después del inicio para no bloquear)
-        def _ota_launch():
+        # N5: Comprobación OTA periódica — primera vez 5 s tras arrancar, luego cada 2 horas.
+        # Si ya se notificó una versión, no vuelve a emitir la señal para no molestar.
+        _OTA_INTERVAL = 2 * 60 * 60  # 2 horas en segundos
+        def _ota_loop():
             import time as _t
-            _t.sleep(5)
-            try:
-                from src.core.version_check import check_for_updates
-                def _ota_cb(ver):
-                    if ver:
-                        self.signals.update_available.emit(ver)
-                # P4: Usar URL OTA configurada por el usuario si existe
-                custom_ota = self.config.get_val('ota_url', '').strip() or None
-                check_for_updates(_ota_cb, custom_url=custom_ota)
-            except Exception as _e:
-                logging.debug("OTA launch: %s", _e)
-        threading.Thread(target=_ota_launch, daemon=True, name="VRCMT-OTA-launcher").start()
+            _t.sleep(5)  # espera inicial para no bloquear el arranque
+            _notified_ver = None
+            while self.running:
+                try:
+                    from src.core.version_check import check_for_updates
+                    def _ota_cb(ver, _ref=_notified_ver):
+                        nonlocal _notified_ver
+                        if ver and ver != _notified_ver:
+                            _notified_ver = ver
+                            self.signals.update_available.emit(ver)
+                    custom_ota = self.config.get_val('ota_url', '').strip() or None
+                    check_for_updates(_ota_cb, custom_url=custom_ota)
+                except Exception as _e:
+                    logging.debug("OTA check: %s", _e)
+                # Esperar el intervalo completo o hasta que la app cierre
+                _t.sleep(_OTA_INTERVAL)
+        threading.Thread(target=_ota_loop, daemon=True, name="VRCMT-OTA-loop").start()
 
         logging.info(f"🚀 Motor VRCMT v{_APP_VERSION} iniciado. (API: {self.tmdb.api_key[:4]}... | Log: {os.path.basename(self.scanner.log_dir)})")
 

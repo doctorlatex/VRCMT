@@ -47,19 +47,27 @@ $contentB64 = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($
 # Siempre operar sobre la rama 'master' donde vive version.txt para OTA
 $repoFile = gh api "repos/doctorlatex/VRCMT/contents/version.txt?ref=master" 2>$null | ConvertFrom-Json
 if ($repoFile -and $repoFile.sha) {
-    gh api repos/doctorlatex/VRCMT/contents/version.txt `
+    $putResult = gh api repos/doctorlatex/VRCMT/contents/version.txt `
         --method PUT `
         -f message="release: v$Version" `
         -f content=$contentB64 `
         -f sha=$repoFile.sha `
-        -f branch=master | Out-Null
+        -f branch=master 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "ERROR al actualizar version.txt en GitHub: $putResult"
+        exit 1
+    }
     Write-Host "OK - master/version.txt actualizado a $Version en GitHub"
 } else {
-    gh api repos/doctorlatex/VRCMT/contents/version.txt `
+    $putResult = gh api repos/doctorlatex/VRCMT/contents/version.txt `
         --method PUT `
         -f message="release: v$Version" `
         -f content=$contentB64 `
-        -f branch=master | Out-Null
+        -f branch=master 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "ERROR al crear version.txt en GitHub: $putResult"
+        exit 1
+    }
     Write-Host "OK - master/version.txt creado con v$Version en GitHub"
 }
 
