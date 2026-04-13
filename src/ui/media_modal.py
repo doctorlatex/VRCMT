@@ -1892,7 +1892,7 @@ class MediaModal(QFrame):
             return b
 
         # Botón Copiar
-        btn_copy = _mk_row_btn("Copiar", row, "#3a3a3a", "#555555")
+        btn_copy = _mk_row_btn("Copiar", row, "#3a3a3a", "#555555", w=68)
         btn_copy.setToolTip(self.engine.config.tr('btn_copy_link', "Copiar Link"))
         btn_copy.clicked.connect(lambda: self._on_copy_link(ver.url))
         btn_copy.setVisible(is_premium or is_image_url)
@@ -1901,14 +1901,14 @@ class MediaModal(QFrame):
         # Botón Reproducir/Ver imagen
         _play_label = "Ver" if is_image_url else "Play"
         _play_tip   = "Ver imagen en el visor" if is_image_url else "Reproducir en el reproductor"
-        btn_play = _mk_row_btn(_play_label, row, "#1a3d1a", "#27ae60")
+        btn_play = _mk_row_btn(_play_label, row, "#1a3d1a", "#27ae60", w=64)
         btn_play.setEnabled(False)
         btn_play.setToolTip(_play_tip)
         btn_play.setVisible(is_premium or is_image_url)
         rl.addWidget(btn_play)
 
         # Botón Eliminar Link
-        btn_del_link = _mk_row_btn("Borrar", row, "#3d1a1a", "#c62828", fg="#ffaaaa")
+        btn_del_link = _mk_row_btn("Borrar", row, "#3d1a1a", "#c62828", fg="#ffaaaa", w=68)
         btn_del_link.setToolTip(self.engine.config.tr('btn_delete_link', "Eliminar este enlace"))
         btn_del_link.clicked.connect(lambda: self._on_delete_link(ver))
         rl.addWidget(btn_del_link)
@@ -2125,7 +2125,7 @@ class MediaModal(QFrame):
 
                 btn_seen_ep = QPushButton("Visto" if ep_seen else "Ver")
                 btn_seen_ep.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
-                btn_seen_ep.setFixedSize(52, 26)
+                btn_seen_ep.setFixedSize(62, 26)
                 btn_seen_ep.setCursor(Qt.PointingHandCursor)
                 btn_seen_ep.setFont(_ep_font)
                 btn_seen_ep.setToolTip("Desmarcar visto" if ep_seen else "Marcar como visto")
@@ -2141,7 +2141,7 @@ class MediaModal(QFrame):
 
                 btn_del_ep = QPushButton("Borrar")
                 btn_del_ep.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, False)
-                btn_del_ep.setFixedSize(52, 26)
+                btn_del_ep.setFixedSize(62, 26)
                 btn_del_ep.setCursor(Qt.PointingHandCursor)
                 btn_del_ep.setFont(_ep_font)
                 btn_del_ep.setToolTip(self.engine.config.tr('btn_delete_ep', "Eliminar capítulo"))
