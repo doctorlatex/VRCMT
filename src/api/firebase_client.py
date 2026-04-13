@@ -20,8 +20,11 @@ logging.getLogger("google.auth.transport.grpc").setLevel(logging.CRITICAL)
 logging.getLogger("google.auth").setLevel(logging.CRITICAL)
 logging.getLogger("google.oauth2").setLevel(logging.CRITICAL)
 
-# Tiempo de vida del caché de acceso (en segundos). 10 minutos por defecto.
+# TTL para caché de acceso a mapas (segundos).
 _CACHE_TTL = 600
+# TTL para caché de estado PREMIUM: 25 s (menor que el intervalo de poll de 30 s
+# para garantizar que cada ciclo de polling va fresco a Firestore).
+_PREMIUM_CACHE_TTL = 25
 _CACHE_FILE = os.path.join(APP_DIR, 'firebase_cache.json')
 
 class FirebaseClient:
@@ -228,12 +231,16 @@ class FirebaseClient:
                 logging.debug(f"☁️ [Cache] No se pudo guardar caché en disco: {e}")
         threading.Thread(target=_write, daemon=True).start()
 
-    def _cache_get(self, key: str):
-        """Devuelve (result, valid) desde el caché si existe y no ha expirado."""
+    def _cache_get(self, key: str, ttl: int = None):
+        """Devuelve (result, valid) desde el caché si existe y no ha expirado.
+        Las claves 'premium:*' usan _PREMIUM_CACHE_TTL en vez del TTL general."""
         entry = self._access_cache.get(key)
         if entry is not None:
             result, ts = entry
-            if (time.time() - ts) < _CACHE_TTL:
+            effective_ttl = ttl if ttl is not None else (
+                _PREMIUM_CACHE_TTL if key.startswith("premium:") else _CACHE_TTL
+            )
+            if (time.time() - ts) < effective_ttl:
                 return result, True
         return None, False
 
@@ -306,28 +313,59 @@ class FirebaseClient:
             logging.warning("🔒 Sin caché disponible; denegando acceso por seguridad.")
             return False
 
-    def get_premium_status(self, discord_id: str) -> bool:
+    def get_premium_status(self, discord_id: str, bypass_cache: bool = False) -> bool:
         """Lee el estatus PREMIUM del usuario con una consulta puntual (sin streaming gRPC).
-        Reemplaza al antiguo listen_premium_status para evitar el crash de Python 3.13
-        causado por Thread-ConsumeBidirectionalStream al usar on_snapshot."""
+        Si bypass_cache=True, ignora la caché y fuerza lectura fresca de Firestore."""
         if not self.db or not discord_id:
             return False
+        cache_key = f"premium:{discord_id}"
+        # Comprobar caché solo si no se fuerza actualización
+        if not bypass_cache:
+            cached, valid = self._cache_get(cache_key)
+            if valid:
+                return bool(cached)
         try:
             doc = self.db.collection('Usuarios').document(discord_id).get()
             if doc.exists:
                 data = doc.to_dict() or {}
                 is_premium = bool(data.get('vip_global', False) or data.get('premium_global', False))
                 self._last_premium_status = is_premium
-                self._cache_set(f"premium:{discord_id}", is_premium)
-                logging.debug(f"☁️ [Premium] Estado leído: {'PREMIUM' if is_premium else 'FREE'}")
+                self._cache_set(cache_key, is_premium)
+                logging.info(f"☁️ [Premium] Estado leído de Firestore: {'PREMIUM' if is_premium else 'FREE'}")
                 return is_premium
+            # Documento no existe → usuario no registrado → FREE
+            self._cache_set(cache_key, False)
+            return False
         except Exception as e:
             logging.error(f"get_premium_status error: {e}")
-            cached, valid = self._cache_get(f"premium:{discord_id}")
-            # _cache_get retorna (result, valid); bool sobre la tupla siempre seria True.
-            if valid:
-                return bool(cached)
+            # Solo usar caché ante error de red si NO es un bypass forzado
+            if not bypass_cache:
+                cached, valid = self._cache_get(cache_key)
+                if valid:
+                    return bool(cached)
         return False
+
+    def force_refresh_premium(self, discord_id: str) -> None:
+        """Borra toda la caché premium de este usuario y fuerza relecura de Firestore."""
+        cache_key = f"premium:{discord_id}"
+        with self._cache_lock:
+            self._access_cache.pop(cache_key, None)
+        # Borrar la clave del archivo de caché en disco
+        try:
+            if os.path.isfile(_CACHE_FILE):
+                import json as _json
+                raw = open(_CACHE_FILE, 'r', encoding='utf-8').read()
+                data = _json.loads(raw).get('data', {})
+                data.pop(cache_key, None)
+                # Reescribir sin la clave
+                payload = _json.dumps({'data': data}, ensure_ascii=False)
+                sig = hmac.new(uuid.UUID(int=0).bytes, payload.encode(), hashlib.sha256).hexdigest()
+                open(_CACHE_FILE, 'w', encoding='utf-8').write(
+                    _json.dumps({'sig': sig, 'data': data}, ensure_ascii=False)
+                )
+        except Exception as _e:
+            logging.debug("force_refresh_premium disk clean: %s", _e)
+        logging.info("🔄 Caché premium borrada para %s — forzando relecura", discord_id)
 
     def listen_premium_status(self, discord_id: str, callback):
         """OBSOLETO — usaba on_snapshot (gRPC bidireccional) que crashea en Python 3.13.

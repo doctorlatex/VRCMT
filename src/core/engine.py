@@ -105,7 +105,11 @@ class VRCMTEngine:
         self._premium_poll_active = True
         self._premium_poll_discord_id = d_id
 
-        def _poll_once():
+        # Contador de errores consecutivos: tras 3 fallos seguidos, baja a FREE
+        self._premium_poll_errors = 0
+        _MAX_POLL_ERRORS = 3
+
+        def _poll_once(bypass_cache: bool = False):
             """Ejecuta UNA consulta de premium via el thread persistente Firebase."""
             if not getattr(self, '_premium_poll_active', False):
                 return
@@ -113,12 +117,22 @@ class VRCMTEngine:
                 return  # Discord ID cambió; este poll está obsoleto
 
             def _op():
-                return self.firebase.get_premium_status(d_id)
+                return self.firebase.get_premium_status(d_id, bypass_cache=bypass_cache)
 
             def _cb(result, error):
                 if not getattr(self, '_premium_poll_active', False):
                     return
-                status = bool(result) if error is None and result is not None else self.is_premium
+                if error is None and result is not None:
+                    self._premium_poll_errors = 0
+                    status = bool(result)
+                else:
+                    self._premium_poll_errors = getattr(self, '_premium_poll_errors', 0) + 1
+                    if self._premium_poll_errors >= _MAX_POLL_ERRORS:
+                        # Tras 3 errores consecutivos, bajar a FREE por seguridad
+                        logging.warning("⚠️ %d errores seguidos en poll premium → bajando a FREE", _MAX_POLL_ERRORS)
+                        status = False
+                    else:
+                        status = self.is_premium  # mantener mientras sean pocos errores
                 self.is_premium = status
                 if hasattr(self, 'signals'):
                     self.signals.premium_updated.emit(status)
@@ -129,18 +143,35 @@ class VRCMTEngine:
         # Primera consulta inmediata
         _poll_once()
 
-        # Polling periódico cada 5 minutos usando un Event compartido que puede
-        # interrumpirse desde _setup_premium_listener al llamarse de nuevo.
+        # Polling periódico cada 30 segundos para detección casi en tiempo real de
+        # cambios de rol (asignación/revocación de premium desde el servidor).
+        _POLL_INTERVAL = 30
         def _poll_loop():
             while getattr(self, '_premium_poll_active', False):
-                # wait() retorna True si el event fue set() (stop), False por timeout (300 s).
-                poll_event.wait(300)
+                # wait() retorna True si el event fue set() (stop), False por timeout.
+                poll_event.wait(_POLL_INTERVAL)
                 if poll_event.is_set():
                     break  # evento señalizado: salir limpiamente
                 if getattr(self, '_premium_poll_active', False):
                     _poll_once()
 
         _t.Thread(target=_poll_loop, daemon=True, name="vrcmt-premium-poll").start()
+
+        # Guardar referencia a _poll_once para que force_premium_refresh la invoque
+        self._poll_once_ref = _poll_once
+
+    def force_premium_refresh(self):
+        """Borra la caché premium y fuerza una nueva lectura inmediata de Firestore."""
+        d_id = getattr(self, '_premium_poll_discord_id', '') or self.discord.get_saved_id()
+        if not d_id:
+            logging.warning("force_premium_refresh: sin Discord ID guardado")
+            return
+        self.firebase.force_refresh_premium(d_id)
+        if callable(getattr(self, '_poll_once_ref', None)):
+            self._poll_once_ref(bypass_cache=True)
+        else:
+            # Fallback: reiniciar el listener desde cero
+            self._setup_premium_listener()
 
     def start(self):
         self.running = True
