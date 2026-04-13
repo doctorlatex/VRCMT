@@ -175,10 +175,10 @@ class SettingsView(QWidget):
         self._update_lang_options()
         self.lang_combo.setStyleSheet("background-color: #1a1a1a; padding: 7px 10px; border-radius: 7px; color: white; border: 1px solid #333;")
         self.btn_apply_lang = QPushButton(self.engine.config.tr('btn_apply_lang', "Aplicar"))
-        self.btn_apply_lang.setFixedWidth(80)
+        self.btn_apply_lang.setMinimumWidth(75)
         self.btn_apply_lang.setEnabled(False)
         self.btn_apply_lang.setStyleSheet(
-            "QPushButton { background-color: #333; color: #888; padding: 7px; border-radius: 7px; font-size: 12px; }"
+            "QPushButton { background-color: #333; color: #888; padding: 7px 14px; border-radius: 7px; font-size: 12px; }"
             "QPushButton:enabled { background-color: #1f6aa5; color: white; }"
             "QPushButton:enabled:hover { background-color: #2980b9; }"
         )
@@ -231,9 +231,9 @@ class SettingsView(QWidget):
         _update_theme_dot(self.theme_combo.currentIndex())
 
         btn_apply_theme = QPushButton(self.engine.config.tr('btn_apply_theme', "Aplicar"))
-        btn_apply_theme.setFixedWidth(80)
+        btn_apply_theme.setMinimumWidth(75)
         btn_apply_theme.setStyleSheet(
-            "QPushButton { background-color: #1f6aa5; color: white; padding: 7px; border-radius: 7px; font-size: 12px; font-weight: bold; }"
+            "QPushButton { background-color: #1f6aa5; color: white; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: bold; }"
             "QPushButton:hover { background-color: #2980b9; }"
         )
         btn_apply_theme.clicked.connect(self._on_apply_theme)
