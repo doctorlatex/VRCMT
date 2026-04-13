@@ -42,19 +42,24 @@ Write-Host "OK - $dst creado"
 # ----- 4. Actualizar version.txt en GitHub via API (sin subir codigo fuente) -----
 Write-Host "`n[3/4] Actualizando version.txt en GitHub (solo version, sin codigo)..."
 
-# Obtener SHA actual del archivo version.txt en el repo publico
+# Obtener SHA actual del archivo version.txt en el repo publico (puede no existir aun)
+$contentB64 = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Version))
 $repoFile = gh api repos/doctorlatex/VRCMT/contents/version.txt 2>$null | ConvertFrom-Json
 if ($repoFile -and $repoFile.sha) {
-    $sha = $repoFile.sha
-    $contentB64 = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Version))
+    # Archivo existe -> actualizar con SHA
     gh api repos/doctorlatex/VRCMT/contents/version.txt `
         --method PUT `
         -f message="release: v$Version" `
         -f content=$contentB64 `
-        -f sha=$sha | Out-Null
+        -f sha=$repoFile.sha | Out-Null
     Write-Host "OK - version.txt actualizado a $Version en GitHub"
 } else {
-    Write-Warning "No se pudo obtener SHA de version.txt - saltando actualizacion de version.txt"
+    # Archivo no existe -> crearlo
+    gh api repos/doctorlatex/VRCMT/contents/version.txt `
+        --method PUT `
+        -f message="release: v$Version" `
+        -f content=$contentB64 | Out-Null
+    Write-Host "OK - version.txt creado con v$Version en GitHub"
 }
 
 # ----- 5. Crear/actualizar GitHub release -----

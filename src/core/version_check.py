@@ -1,7 +1,7 @@
 import threading
 import logging
 
-CURRENT_VERSION = "2.0.11"
+CURRENT_VERSION = "2.0.12"
 _DEFAULT_VERSION_URL = "https://raw.githubusercontent.com/doctorlatex/VRCMT/master/version.txt"
 
 
