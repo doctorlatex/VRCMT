@@ -691,6 +691,19 @@ class MediaModal(QFrame):
         except Exception:
             return 'Oscuro'
 
+    def _copy_title(self):
+        """Copia el título al portapapeles y muestra feedback visual breve."""
+        from PySide6.QtWidgets import QApplication
+        title = self.item.titulo if self.item else ''
+        if not title:
+            return
+        QApplication.clipboard().setText(title)
+        # Feedback visual: cambiar tooltip brevemente
+        orig = self.lbl_title.toolTip()
+        self.lbl_title.setToolTip(self.engine.config.tr('tooltip_copied', "¡Copiado! / Copied!"))
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(1500, lambda: self.lbl_title.setToolTip(orig) if shiboken.isValid(self.lbl_title) else None)
+
     def _tipo_stream_imagen_ui(self):
         return _tipo_normalizado_es_stream_imagen(getattr(self.item, "tipo_contenido", None))
 
@@ -817,6 +830,9 @@ class MediaModal(QFrame):
         self.lbl_title = QLabel()
         self.lbl_title.setObjectName("Title")
         self.lbl_title.setWordWrap(True)
+        self.lbl_title.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.lbl_title.setToolTip(self.engine.config.tr('tooltip_copy_title', "Clic para copiar el título / Click to copy title"))
+        self.lbl_title.mousePressEvent = lambda _e: self._copy_title()
         right_layout.addWidget(self.lbl_title)
 
         self.lbl_meta = QLabel()
@@ -2976,6 +2992,15 @@ class MediaModal(QFrame):
                 self.item.es_anime = 1
 
         self.item.save()
+
+        # Actualizar Discord RPC si este es el medio actualmente en reproducción
+        # para que refleje el título corregido de inmediato.
+        if hasattr(self.engine, 'current_media_title') and self.engine.current_media_title:
+            self.engine.current_media_title = self.item.titulo
+            try:
+                self.engine._update_rpc()
+            except Exception:
+                pass
 
         # Migración de voto comunitario si el imdb_id cambió con el Fix.
         # Si el usuario tenía calificación > 0, moverla al nuevo imdb_id en Firebase.
