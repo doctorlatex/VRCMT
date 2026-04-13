@@ -2760,15 +2760,45 @@ class MediaModal(QFrame):
         self.data_changed.emit(self.item)
         self.close_modal()
 
+    @staticmethod
+    def _fmt_min(mins: float) -> str:
+        """Formatea minutos como '45m' o '1h 35m'. / Formats minutes as '45m' or '1h 35m'."""
+        m = max(0, int(mins))
+        return f"{m // 60}h {m % 60}m" if m >= 60 else f"{m}m"
+
     def _build_meta_line(self, vrcmt_avg: float = -1.0, vrcmt_count: int = 0) -> str:
-        """Construye la línea de metadatos del título incluyendo rating VRCMT si existe."""
+        """Construye la línea de metadatos del título incluyendo rating VRCMT, duración y progreso."""
         tmdb_r = float(self.item.calificacion_global or 0.0)
+        duracion = float(self.item.duracion_total or 0.0)
+        minuto   = float(self.item.minuto_actual or 0.0)
+        visto    = int(self.item.estado_visto or 0) == 1
+        es_serie = getattr(self.item, 'tipo_contenido', '') == 'Serie'
+
+        # Calcular ratio de progreso para decidir si mostrar "tiempo visto"
+        ratio = (minuto / duracion) if duracion > 0 else 0.0
+
         parts = [
             f"📅 {self.item.año or '????'}",
             f"⭐ {tmdb_r:.1f} TMDb",
         ]
         if vrcmt_avg > 0:
             parts.append(f"🎮 {vrcmt_avg:.1f} VRCMT ({vrcmt_count})")
+
+        # Duración total si está disponible
+        if duracion > 0:
+            parts.append(f"⏱ {self._fmt_min(duracion)}")
+
+        # Progreso visto: solo si tiene avance, no está marcado como visto
+        # y no alcanzó el 90% (en cuyo caso ya se marca como visto automáticamente)
+        if minuto > 0 and not visto and ratio < 0.9:
+            lbl_watched = self.engine.config.tr('lbl_watched', "visto")
+            if es_serie:
+                t = str(getattr(self.item, 'temporada', '1') or '1').lstrip('0') or '1'
+                e = str(getattr(self.item, 'episodio',  '1') or '1').lstrip('0') or '1'
+                parts.append(f"T{t}E{e}  ▶ {self._fmt_min(minuto)} {lbl_watched}")
+            else:
+                parts.append(f"▶ {self._fmt_min(minuto)} {lbl_watched}")
+
         parts.append(f"🎭 {self.item.generos or 'N/A'}")
         return "  |  ".join(parts)
 

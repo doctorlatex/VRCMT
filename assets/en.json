@@ -45,6 +45,7 @@
     "lbl_lang_selection": "🌎 Change Language / Cambiar Idioma",
     "btn_apply_lang": "Apply",
     "btn_apply_theme": "Apply",
+    "lbl_watched": "watched",
     "lbl_tmdb_key": "🔑 Personal TMDb API Key (Optional):",
     "placeholder_tmdb_key": "Enter your own API Key if the common one fails...",
     "lbl_log_dir": "📂 VRChat Log Directory:",
