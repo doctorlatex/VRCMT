@@ -1,8 +1,16 @@
 import threading
 import logging
 
-# OTA: misma versión que `version.txt` en la rama master del repo (raw GitHub).
-# OTA: same version as `version.txt` on repo master branch (GitHub raw).
+# --- Flujo de versión / Release workflow (OTA) ---
+# [ES] 1) Las mejoras pueden ser acumulativas en local: subes a GitHub UNA sola vez bajo un número.
+#     2) Antes de publicar a usuarios: sube `version.txt` en GitHub (rama `master` para esta URL)
+#        con el MISMO número que `CURRENT_VERSION` del ejecutable que vas a distribuir.
+#     3) La rama `main` del repo público debe llevar el mismo `version.txt` para que la web
+#        de GitHub no muestre una versión vieja (paridad con `master`).
+# [EN] 1) Improvements can accumulate locally; you push once under one version number.
+#     2) Before users get the update: push `version.txt` on GitHub (`master` for this URL)
+#        with the SAME value as `CURRENT_VERSION` in the build you ship.
+#     3) Keep public repo `main` branch `version.txt` in sync so the GitHub UI matches `master`.
 CURRENT_VERSION = "2.0.14"
 _DEFAULT_VERSION_URL = "https://raw.githubusercontent.com/doctorlatex/VRCMT/master/version.txt"
 
