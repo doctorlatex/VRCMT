@@ -6,6 +6,68 @@ En este repositorio público solo hay **instrucciones**, el archivo **`version.t
 
 ---
 
+## Descripción del producto
+
+### Español — VRChat Media Tracker (VRCMT)
+
+**VRChat Media Tracker** es una herramienta para **tener una pequeña biblioteca de información** del contenido multimedia en VR. Está **diseñada para rastrear, capturar y compartir en tiempo real** lo que estás viendo dentro de VRChat.
+
+#### Funcionalidades principales
+
+- **Extractor de enlaces multimedia:** captura automáticamente los enlaces (URLs) de los reproductores dentro de los mundos de VRChat, facilitando el acceso directo a vídeos de YouTube y streams en vivo **sin salir de la experiencia** ni tener que pedirlos manualmente.
+- **Tarjeta “Jugando” en Discord (Rich Presence):** muestra dinámicamente en tu perfil de Discord no solo el mundo en el que te encuentras, sino también el **título y el contenido** que estás visualizando en el reproductor del mundo.
+- **Asistente de cine e integración con IMDb:** aunque no es la finalidad principal, ofrece compatibilidad con mundos de cine para mostrar **información detallada** del filme en curso.
+
+**Nota:** debido a que los nombres de los archivos en los mundos pueden variar, el sistema ofrece una **búsqueda manual** (por ejemplo vinculada a IMDb) para identificar correctamente la película y obtener sus metadatos cuando la detección automática no es posible. Así puedes mantener el seguimiento de tus películas y de los capítulos que ya hayas visto de tus series favoritas.
+
+**Sincronización social:** pensado para compartir tus gustos musicales o visuales con tu comunidad, de modo que otros usuarios puedan ver **qué contenido estás consumiendo** en tiempo real (según la configuración de Discord y la privacidad que elijas).
+
+#### Modelos de acceso: Free vs. Premium
+
+Para asegurar el desarrollo continuo de **VRChat Media Tracker (VRCMT)** y añadir nuevas funciones basadas en el apoyo de la comunidad, existen **dos niveles de acceso**:
+
+**1. Plan Free (gratuito)** — pensado para el usuario casual que disfruta de contenido popular.
+
+- **Acceso limitado:** captura y muestra enlaces procedentes sobre todo de **YouTube** y **streams en vivo** (por ejemplo Twitch / YouTube Live), según las reglas de la aplicación.
+- **Funciones básicas:** incluye el **Rich Presence** estándar de Discord y la visualización del **mundo actual**.
+
+**2. Plan Premium** — la experiencia completa para quien quiere el **control total** de su biblioteca multimedia.
+
+- **Acceso total:** desbloquea la captura de **todos los enlaces** compartidos en los mapas (incluidos servidores directos, archivos de vídeo y plataformas externas).
+- **Integración con mundos aliados:** en mundos que colaboran con VRCMT, este plan puede ofrecer **acceso exclusivo** a los enlaces de sus reproductores: pensado como “llave VIP” para quien desea interactuar con el contenido especial de esos creadores.
+- **Evolución constante:** los suscriptores Premium pueden recibir **funciones exclusivas** adicionales según el crecimiento y el apoyo al proyecto.
+
+### English — VRChat Media Tracker (VRCMT)
+
+**VRChat Media Tracker** is a tool designed to maintain a **personal information library** about VR multimedia content. It is built to **track, capture, and share in real time** what you are watching inside VRChat.
+
+#### Core features
+
+- **Multimedia link extractor:** automatically captures links (URLs) from players inside VRChat worlds, giving you direct access to YouTube videos and live streams **without leaving the experience** or having to request links manually.
+- **Discord Rich Presence (“Now playing” card):** dynamically shows on your Discord profile not only the world you are in, but also the **exact title and content** you are watching on the world’s media player.
+- **Cinema assistant & IMDb-related lookup:** while not its primary purpose, it can work alongside movie worlds to show **detailed information** about the film currently playing.
+
+**Note:** because file names in worlds can vary, the app offers **manual search** (including IMDb-based workflows) to correctly identify a title and fetch metadata when automatic detection is not possible—so you can keep track of movies and episodes you have already watched.
+
+**Social sync:** great for sharing musical or visual tastes with your community, so others can see **what you are consuming in real time** (depending on your Discord settings and privacy choices).
+
+#### Access models: Free vs. Premium
+
+To support ongoing development of **VRChat Media Tracker (VRCMT)** and ship new features based on community backing, there are **two access tiers**:
+
+**1. Free plan** — for casual users who mostly enjoy mainstream content.
+
+- **Limited access:** captures and surfaces links primarily from **YouTube** and **live streams** (e.g. Twitch / YouTube Live), according to the app’s rules.
+- **Core features:** standard **Discord Rich Presence** and **current world** information.
+
+**2. Premium plan** — the full experience for users who want **total control** over their media library.
+
+- **Unlimited access:** unlocks capture of **all shared links** within maps (including direct servers, video files, and third-party platforms).
+- **Partner world integration:** in worlds that collaborate with VRCMT, Premium can provide **exclusive access** to their player links—a “VIP key” for users who want deeper interaction with creators’ special content.
+- **Continuous evolution:** Premium subscribers may receive **additional exclusive features** as the project grows and gains more support.
+
+---
+
 ## Ventana principal: zonas y controles
 
 ### Barra lateral (izquierda)
