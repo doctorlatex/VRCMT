@@ -61,7 +61,11 @@ class VRCMTEngine:
         self.timer = PlaybackTimer()
         self.scanner = VRChatLogScanner(log_dir)
         self.running = False
-        
+        # Centinela para emisiones seguras desde hilos secundarios.
+        # Se pone a False en stop() ANTES de destruir nada, evitando el segfault
+        # de shiboken6 cuando un hilo intenta emit() sobre un QObject ya destruido.
+        self._signals_active = False
+
         # --- ESTADO DE PRESENCIA ---
         self.current_world = "Mundo Desconocido"
         self.current_media_title = None
@@ -122,6 +126,8 @@ class VRCMTEngine:
             def _cb(result, error):
                 if not getattr(self, '_premium_poll_active', False):
                     return
+                if not getattr(self, '_signals_active', False):
+                    return  # app en proceso de cierre, no emitir sobre QObjects destruidos
                 if error is None and result is not None:
                     self._premium_poll_errors = 0
                     status = bool(result)
@@ -134,8 +140,11 @@ class VRCMTEngine:
                     else:
                         status = self.is_premium  # mantener mientras sean pocos errores
                 self.is_premium = status
-                if hasattr(self, 'signals'):
-                    self.signals.premium_updated.emit(status)
+                try:
+                    if getattr(self, '_signals_active', False) and hasattr(self, 'signals'):
+                        self.signals.premium_updated.emit(status)
+                except Exception:
+                    pass
                 logging.info(f"💎 Estatus PREMIUM poll: {'ACTIVO' if status else 'FREE'}")
 
             self.firebase.run_firebase_async(_op, _cb)
@@ -175,6 +184,7 @@ class VRCMTEngine:
 
     def start(self):
         self.running = True
+        self._signals_active = True  # habilitar emisiones desde hilos secundarios
         self._normalize_social_types()
         
         # --- MEJORA v2.11.60: SINCRONIZACIÓN RADICAL DE IDIOMA ---
@@ -249,17 +259,26 @@ class VRCMTEngine:
             while self.running:
                 try:
                     from src.core.version_check import check_for_updates
-                    def _ota_cb(ver, _ref=_notified_ver):
+                    def _ota_cb(ver):
                         nonlocal _notified_ver
-                        if ver and ver != _notified_ver:
-                            _notified_ver = ver
+                        if not ver or ver == _notified_ver:
+                            return
+                        if not getattr(self, '_signals_active', False):
+                            return  # app cerrándose, no emitir
+                        _notified_ver = ver
+                        try:
                             self.signals.update_available.emit(ver)
+                        except Exception:
+                            pass
                     custom_ota = self.config.get_val('ota_url', '').strip() or None
                     check_for_updates(_ota_cb, custom_url=custom_ota)
                 except Exception as _e:
                     logging.debug("OTA check: %s", _e)
-                # Esperar el intervalo completo o hasta que la app cierre
-                _t.sleep(_OTA_INTERVAL)
+                # Espera fraccionada: sale antes si la app cierra durante el intervalo
+                for _ in range(_OTA_INTERVAL):
+                    if not self.running:
+                        break
+                    _t.sleep(1)
         threading.Thread(target=_ota_loop, daemon=True, name="VRCMT-OTA-loop").start()
 
         logging.info(f"🚀 Motor VRCMT v{_APP_VERSION} iniciado. (API: {self.tmdb.api_key[:4]}... | Log: {os.path.basename(self.scanner.log_dir)})")
@@ -316,8 +335,7 @@ class VRCMTEngine:
                                 ).execute())
                             if n:
                                 logging.info("🌍 WORLD_CHANGE: corregidas %d capturas recientes → '%s'", n, self.current_world)
-                                if hasattr(self, 'signals'):
-                                    self.signals.media_added.emit()
+                                self._safe_emit(self.signals.media_added)
                         except Exception as _e:
                             logging.debug("world_change fix: %s", _e)
             except Exception as e:
@@ -604,7 +622,7 @@ class VRCMTEngine:
             self.timer.start(existing.id, existing.duracion_total)
         self._update_rpc()
         if emit_signal and hasattr(self, "signals"):
-            self.signals.media_added.emit()
+            self._safe_emit(self.signals.media_added)
 
     # Free-URL whitelist: URLs from these hosts are always stored regardless of premium status.
     _FREE_HOSTS = ('youtube.com', 'youtu.be', 'twitch.tv', 'kick.com', 'soundcloud.com')
@@ -639,8 +657,7 @@ class VRCMTEngine:
                 local_path = self.img_manager.download_capture(url, world)
                 if local_path:
                     self._save_image(url, world, local_path)
-                    if hasattr(self, 'signals'):
-                        self.signals.media_added.emit()
+                    self._safe_emit(self.signals.media_added)
                 logging.info("📸 [Image Download nativo] %s → %s", url[:80], world)
                 return
 
@@ -736,7 +753,7 @@ class VRCMTEngine:
                     self.timer.start(m_id, 120.0)
                     self.current_media_title = social_info['title']
                     self._update_rpc()
-                    if hasattr(self, 'signals'): self.signals.media_added.emit()
+                    self._safe_emit(self.signals.media_added)
                     return
                 if is_social_stream:
                     # Incluso si falla oEmbed, YouTube/Twitch/Kick siempre van en Stream/Imagen.
@@ -747,7 +764,7 @@ class VRCMTEngine:
                     self.timer.start(m_id, 120.0)
                     self.current_media_title = fallback_title
                     self._update_rpc()
-                    if hasattr(self, 'signals'): self.signals.media_added.emit()
+                    self._safe_emit(self.signals.media_added)
                     return
 
             # --- CLASIFICACIÓN Y BÚSQUEDA ---
@@ -762,7 +779,7 @@ class VRCMTEngine:
                 if local_path:
                     self._save_image(url, world, local_path)
                     self._session_url_map[url] = f"IMG_{hashlib.md5(url.encode()).hexdigest()[:10]}"
-                    if hasattr(self, 'signals'): self.signals.media_added.emit()
+                    self._safe_emit(self.signals.media_added)
                 return
 
             tmdb_q = (media_info.get('canonical_title') or '').strip() or title_search
@@ -1160,7 +1177,7 @@ class VRCMTEngine:
             item.save()
 
         logging.info(f"✅ Registrado Forense: {details.get('title') or details.get('name')} (T{season} E{episode}) [{tipo_sugerido}]")
-        if hasattr(self, 'signals'): self.signals.media_added.emit()
+        self._safe_emit(self.signals.media_added)
         return m_id
 
     def _save_basic(self, url, title, world, w_id=None, media_info=None):
@@ -1197,7 +1214,7 @@ class VRCMTEngine:
             item.save()
 
         logging.info(f"✅ Registrado (Básico Forense): {title} (T{season} E{episode}) [{tipo_final}]")
-        if hasattr(self, 'signals'): self.signals.media_added.emit()
+        self._safe_emit(self.signals.media_added)
         return m_id
 
     def _save_image(self, url, world, path):
@@ -1250,7 +1267,7 @@ class VRCMTEngine:
             )
             logging.info("📸 Nueva captura guardada: %s (T.%s Ep.%s)", world, season, episode)
         
-        if hasattr(self, 'signals'): self.signals.media_added.emit()
+        self._safe_emit(self.signals.media_added)
 
     def _title_from_url(self, url):
         # 1. Extraer nombre base de la URL
@@ -1340,9 +1357,13 @@ class VRCMTEngine:
                     logging.error(f"  ❌ Error actualizando {item.titulo}: {e}")
             
             # Avisar a la UI para refrescar si es necesario
-            if hasattr(self, 'signals'): self.signals.media_added.emit()
+            self._safe_emit(self.signals.media_added)
 
     def stop(self):
+        # PRIMERO: deshabilitar emisiones desde hilos secundarios para evitar el
+        # segfault de shiboken6 (ACCESS VIOLATION en BindingManager::retrieveWrapper)
+        # que ocurre cuando un hilo emite sobre un QObject ya en proceso de destrucción.
+        self._signals_active = False
         self.running = False
         if self.config.get_val("vrchat_stub_restore_on_exit", False):
             try:
@@ -1363,6 +1384,18 @@ class VRCMTEngine:
         from PySide6.QtCore import QThreadPool
         logging.info("⏳ Esperando a que terminen los hilos de fondo...")
         QThreadPool.globalInstance().waitForDone(2000) # Máximo 2 segundos de espera
+
+    def _safe_emit(self, signal, *args):
+        """Emite una señal Qt solo si la app no está en proceso de cierre.
+        Centraliza la guarda contra el segfault de shiboken6 (0xc0000005 en
+        BindingManager::retrieveWrapper) que ocurre cuando un hilo secundario
+        emite sobre un QObject ya destruido durante el shutdown."""
+        if not getattr(self, '_signals_active', False):
+            return
+        try:
+            signal.emit(*args)
+        except Exception:
+            pass
 
     def _probe_is_image(self, url: str):
         """Sonda forense para determinar si un enlace es una imagen real y obtener su URL directa (v4.8)"""

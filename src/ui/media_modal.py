@@ -702,7 +702,13 @@ class MediaModal(QFrame):
         orig = self.lbl_title.toolTip()
         self.lbl_title.setToolTip(self.engine.config.tr('tooltip_copied', "¡Copiado! / Copied!"))
         from PySide6.QtCore import QTimer
-        QTimer.singleShot(1500, lambda: self.lbl_title.setToolTip(orig) if shiboken.isValid(self.lbl_title) else None)
+        def _restore_tooltip():
+            try:
+                if shiboken.isValid(self) and shiboken.isValid(self.lbl_title):
+                    self.lbl_title.setToolTip(orig)
+            except Exception:
+                pass
+        QTimer.singleShot(1500, _restore_tooltip)
 
     def _tipo_stream_imagen_ui(self):
         return _tipo_normalizado_es_stream_imagen(getattr(self.item, "tipo_contenido", None))
@@ -2387,10 +2393,6 @@ class MediaModal(QFrame):
 
     def _do_upload_rating(self):
         """Ejecutado por el debounce timer (20 s sin cambios): sube a Firebase."""
-        # #region agent log
-        import json as _j, time as _t
-        open('debug-6ee757.log','a').write(_j.dumps({"sessionId":"6ee757","timestamp":int(_t.time()*1000),"location":"media_modal:_do_upload_rating:entry","message":"upload timer fired","data":{"valid":shiboken.isValid(self),"imdb":self._pending_rating_imdb,"val":self._pending_rating_value,"uploads_in_window":len(self._rating_upload_times)},"hypothesisId":"H1,H4"})+'\n')
-        # #endregion
         if not shiboken.isValid(self):
             return
 

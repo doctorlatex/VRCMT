@@ -997,6 +997,35 @@ class MainWindow(QMainWindow):
                     w.flush_rating_state_before_close()
         except Exception as e:
             logging.debug("closeEvent flush modals: %s", e)
+
+        # Desconectar señales ANTES de detener el engine para que ningún hilo
+        # entregue una emisión a un slot cuyo widget ya está en destrucción.
+        # Esto complementa el flag _signals_active del engine para el caso
+        # de que un emit() ya esté en la cola del event-loop de Qt.
+        try:
+            sig = self.engine.signals
+            for signal, slot in (
+                (sig.media_added,       self.on_media_added),
+                (sig.language_changed,  self.on_language_changed),
+                (sig.api_error,         self.on_api_error),
+            ):
+                try:
+                    signal.disconnect(slot)
+                except Exception:
+                    pass
+            if hasattr(sig, 'update_available'):
+                try:
+                    sig.update_available.disconnect(self._show_update_banner)
+                except Exception:
+                    pass
+            if hasattr(sig, 'premium_updated'):
+                try:
+                    sig.premium_updated.disconnect()
+                except Exception:
+                    pass
+        except Exception as e:
+            logging.debug("closeEvent disconnect signals: %s", e)
+
         if hasattr(self.engine, 'stop'):
             self.engine.stop()
         os._exit(0)
