@@ -1,6 +1,8 @@
 import threading
 import logging
 
+# OTA: misma versión que `version.txt` en la rama master del repo (raw GitHub).
+# OTA: same version as `version.txt` on repo master branch (GitHub raw).
 CURRENT_VERSION = "2.0.14"
 _DEFAULT_VERSION_URL = "https://raw.githubusercontent.com/doctorlatex/VRCMT/master/version.txt"
 
