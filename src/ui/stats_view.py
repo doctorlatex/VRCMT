@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-                             QGridLayout, QScrollArea, QProgressBar)
+                             QGridLayout, QScrollArea)
 from PySide6.QtCore import Qt
 from src.db.models import Multimedia
 from peewee import fn
@@ -82,26 +82,6 @@ class StatsView(QWidget):
         self.genre_layout = QVBoxLayout(self.genre_container)
         self.content_layout.addWidget(self.genre_container)
 
-        # F7: Sección Progreso de Series / Series Completion
-        self.content_layout.addWidget(QLabel(
-            self.engine.config.tr('lbl_series_completion', '📺 Progreso de Series / Series Progress'),
-            objectName="SectionTitle"
-        ))
-        self.series_progress_container = QFrame()
-        self.series_progress_container.setStyleSheet("background-color: #161616; border-radius: 15px; padding: 20px;")
-        self.series_progress_layout = QVBoxLayout(self.series_progress_container)
-        self.content_layout.addWidget(self.series_progress_container)
-
-        # F7: Sección Actividad Mensual / Monthly Activity
-        self.content_layout.addWidget(QLabel(
-            self.engine.config.tr('lbl_monthly_activity', '📅 Actividad Mensual / Monthly Activity'),
-            objectName="SectionTitle"
-        ))
-        self.monthly_container = QFrame()
-        self.monthly_container.setStyleSheet("background-color: #161616; border-radius: 15px; padding: 20px;")
-        self.monthly_layout = QVBoxLayout(self.monthly_container)
-        self.content_layout.addWidget(self.monthly_container)
-
         self.content_layout.addStretch()
         
         self.scroll.setWidget(self.container)
@@ -143,17 +123,6 @@ class StatsView(QWidget):
             if widget:
                 widget.setParent(None)
                 widget.deleteLater()
-
-        # F7: Limpiar secciones extendidas / Clear extended sections
-        for layout in (getattr(self, 'series_progress_layout', None),
-                       getattr(self, 'monthly_layout', None)):
-            if layout is None:
-                continue
-            for i in reversed(range(layout.count())):
-                w = layout.itemAt(i).widget()
-                if w:
-                    w.setParent(None)
-                    w.deleteLater()
 
         try:
             # 1. Estadísticas Básicas
@@ -210,103 +179,6 @@ class StatsView(QWidget):
                     row_l.addWidget(progress, 3)
                     row_l.addWidget(count_lbl, 1)
                     self.genre_layout.addWidget(row)
-
-            # F7: Progreso de series / Series completion
-            try:
-                serie_rows = (
-                    Multimedia
-                    .select(
-                        Multimedia.titulo,
-                        fn.COUNT(Multimedia.id).alias('total'),
-                        fn.SUM(Multimedia.estado_visto).alias('seen'),
-                    )
-                    .where(Multimedia.tipo_contenido == 'Serie')
-                    .group_by(Multimedia.titulo)
-                    .order_by(fn.COUNT(Multimedia.id).desc())
-                    .limit(8)
-                )
-                serie_list = list(serie_rows)
-                if not serie_list:
-                    self.series_progress_layout.addWidget(QLabel(
-                        self.engine.config.tr('msg_no_series', 'No hay series guardadas aún.')
-                    ))
-                else:
-                    for r in serie_list:
-                        total = int(r.total or 0)
-                        seen = int(r.seen or 0)
-                        if total == 0:
-                            continue
-                        pct = int((seen / total) * 100)
-                        row_w = QWidget()
-                        row_l = QHBoxLayout(row_w)
-                        row_l.setContentsMargins(0, 4, 0, 4)
-                        lbl_t = QLabel(r.titulo or "—")
-                        lbl_t.setStyleSheet("font-size: 13px; font-weight: bold;")
-                        lbl_t.setFixedWidth(220)
-                        pb = QProgressBar()
-                        pb.setRange(0, 100)
-                        pb.setValue(pct)
-                        pb.setFixedHeight(10)
-                        pb.setTextVisible(False)
-                        color = "#27ae60" if seen >= total else "#1f6aa5"
-                        pb.setStyleSheet(f"""
-                            QProgressBar {{ background: #2a2a2a; border-radius: 5px; border: none; }}
-                            QProgressBar::chunk {{ background: {color}; border-radius: 5px; }}
-                        """)
-                        lbl_pct = QLabel(f"{seen}/{total}")
-                        lbl_pct.setStyleSheet("color: #888; font-size: 12px;")
-                        lbl_pct.setFixedWidth(55)
-                        row_l.addWidget(lbl_t)
-                        row_l.addWidget(pb, 1)
-                        row_l.addWidget(lbl_pct)
-                        self.series_progress_layout.addWidget(row_w)
-            except Exception as _e:
-                logging.debug("F7 series progress: %s", _e)
-
-            # F7: Actividad mensual / Monthly activity
-            try:
-                from collections import defaultdict
-                import datetime
-                monthly: dict = defaultdict(int)
-                for m in Multimedia.select(Multimedia.ultima_actualizacion).where(
-                    Multimedia.ultima_actualizacion.is_null(False)
-                ):
-                    raw = str(m.ultima_actualizacion or "")[:7]  # "YYYY-MM"
-                    if raw and len(raw) == 7:
-                        monthly[raw] += 1
-                sorted_months = sorted(monthly.items())[-6:]  # últimos 6 meses
-                if not sorted_months:
-                    self.monthly_layout.addWidget(QLabel(
-                        self.engine.config.tr('msg_no_activity', 'Sin actividad registrada.')
-                    ))
-                else:
-                    max_v = max(v for _, v in sorted_months) or 1
-                    for month, cnt in sorted_months:
-                        pct = int((cnt / max_v) * 100)
-                        row_w = QWidget()
-                        row_l = QHBoxLayout(row_w)
-                        row_l.setContentsMargins(0, 3, 0, 3)
-                        lbl_m = QLabel(month)
-                        lbl_m.setStyleSheet("font-size: 12px; color: #9aa0a6;")
-                        lbl_m.setFixedWidth(70)
-                        pb = QProgressBar()
-                        pb.setRange(0, 100)
-                        pb.setValue(pct)
-                        pb.setFixedHeight(10)
-                        pb.setTextVisible(False)
-                        pb.setStyleSheet("""
-                            QProgressBar { background: #2a2a2a; border-radius: 5px; border: none; }
-                            QProgressBar::chunk { background: #8e44ad; border-radius: 5px; }
-                        """)
-                        lbl_cnt = QLabel(str(cnt))
-                        lbl_cnt.setStyleSheet("color: #888; font-size: 12px;")
-                        lbl_cnt.setFixedWidth(40)
-                        row_l.addWidget(lbl_m)
-                        row_l.addWidget(pb, 1)
-                        row_l.addWidget(lbl_cnt)
-                        self.monthly_layout.addWidget(row_w)
-            except Exception as _e:
-                logging.debug("F7 monthly: %s", _e)
 
         except Exception as e:
             logging.error("Error cargando estadísticas: %s", e)
