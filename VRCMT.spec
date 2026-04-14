@@ -14,6 +14,9 @@ added_files = [
     (os.path.join(PYTHON_SITE, "wordninja"), "wordninja"),
 ]
 hidden_imports = [
+    "PySide6.QtWidgets",
+    "PySide6.QtCore",
+    "PySide6.QtGui",
     "PySide6.QtNetwork",
     "PySide6.QtMultimedia",
     "shiboken6",
@@ -64,7 +67,9 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    # UPX puede romper DLLs de Qt/PySide6 en algunos equipos (ModuleNotFoundError al arrancar).
+    # UPX can break Qt/PySide6 DLLs on some systems (ModuleNotFoundError at startup).
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,

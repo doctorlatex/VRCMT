@@ -11,7 +11,7 @@ import logging
 #     2) Before users get the update: push `version.txt` on GitHub (`master` for this URL)
 #        with the SAME value as `CURRENT_VERSION` in the build you ship.
 #     3) Keep public repo `main` branch `version.txt` in sync so the GitHub UI matches `master`.
-CURRENT_VERSION = "2.0.14"
+CURRENT_VERSION = "2.0.15"
 _DEFAULT_VERSION_URL = "https://raw.githubusercontent.com/doctorlatex/VRCMT/master/version.txt"
 
 
