@@ -528,6 +528,20 @@ class VRCMTEngine:
         m2 = re.search(r"[?&]v=([A-Za-z0-9_-]{11})", url)
         return m2.group(1) if m2 else None
 
+    @staticmethod
+    def _extract_imdb_id_from_url(url: str) -> Optional[str]:
+        """Si la URL contiene un ID IMDb (tt + 7+ dígitos), devolverlo en minúsculas.
+        Cubre rutas tipo imdb.com/title/tt…, query strings y nombres de archivo."""
+        if not url or not isinstance(url, str):
+            return None
+        try:
+            from urllib.parse import unquote
+            decoded = unquote(url)
+        except Exception:
+            decoded = url
+        m = re.search(r"(?i)\b(tt\d{7,})\b", decoded)
+        return m.group(1).lower() if m else None
+
     def _find_existing_media_by_url(self, url: str):
         """Misma entrada guardada aunque la URL varíe un poco (/, YouTube corto vs watch)."""
         if not url:
@@ -790,14 +804,6 @@ class VRCMTEngine:
                 f"🔎 Nueva detección forense: {title_search} | TMDb≈{tmdb_q} | Año: {media_info['year']} | T: {media_info['season']} E: {media_info['episode']}"
             )
 
-            # Búsqueda TMDb con Inteligencia NLP
-            # Forzar tipo en la búsqueda si las reglas de oro lo detectaron
-            search_type = 'tv' if forced_type == 'Serie' else 'multi'
-
-            results = self.tmdb.search(tmdb_q, language=self._get_tmdb_lang(), year=media_info['year'], media_type=search_type)
-            if not results and media_info['year']:
-                results = self.tmdb.search(tmdb_q, language=self._get_tmdb_lang(), media_type=search_type)
-
             # --- SEGURIDAD FREE: no almacenar URLs privadas para usuarios sin premium ---
             # Si el usuario es FREE y la URL no es pública (YouTube/Twitch/Kick…),
             # guardamos solo el fingerprint del último segmento de ruta en vez de la
@@ -811,33 +817,78 @@ class VRCMTEngine:
             else:
                 store_url = self._url_free_fp(url) or ""
 
-            if results:
-                best = results[0]
-                # Si las reglas de oro dicen Serie pero TMDb dice Película (o viceversa), confiar en Reglas de Oro si es muy específico
-                res_type = best.get('media_type', 'movie')
-                if forced_type == 'Serie' and res_type == 'movie':
-                    # Re-buscar específicamente como TV (v4.7)
-                    tv_results = self.tmdb._call("GET", "search/tv", {'query': tmdb_q, 'language': self._get_tmdb_lang()})
-                    if tv_results and tv_results.get('results'):
-                        best = tv_results['results'][0]
-                        best['media_type'] = 'tv'
+            # --- IMDb en el enlace: TMDb find/{imdb_id} antes de cualquier búsqueda por texto ---
+            imdb_from_url = self._extract_imdb_id_from_url(url)
+            details_by_imdb = None
+            if imdb_from_url:
+                best_hit = self.tmdb.find_by_imdb_id(imdb_from_url, language=self._get_tmdb_lang())
+                if best_hit:
+                    details_by_imdb = self.tmdb.get_details(
+                        best_hit['media_type'], best_hit['id'], language=self._get_tmdb_lang()
+                    )
+                    if details_by_imdb and details_by_imdb.get('id'):
+                        logging.info(
+                            "🔗 IMDb en URL → TMDb directo: %s → %s/%s",
+                            imdb_from_url,
+                            best_hit['media_type'],
+                            best_hit['id'],
+                        )
+                    else:
+                        details_by_imdb = None
 
-                details = self.tmdb.get_details(best.get('media_type', 'movie'), best['id'], language=self._get_tmdb_lang())
-                m_id = self._save_media(store_url, details, world, w_id, media_info)
-                self._session_url_map[url] = m_id  # registrar para re-detecciones intra-sesión
-                runtime = details.get('runtime') or (details.get('episode_run_time', [0])[0] if details.get('episode_run_time') else 0)
+            if details_by_imdb:
+                m_id = self._save_media(store_url, details_by_imdb, world, w_id, media_info)
+                self._session_url_map[url] = m_id
+                runtime = details_by_imdb.get('runtime') or (
+                    details_by_imdb.get('episode_run_time', [0])[0]
+                    if details_by_imdb.get('episode_run_time')
+                    else 0
+                )
                 self.timer.start(m_id, float(runtime or 0))
-                self.current_media_title = details.get('title') or details.get('name')
+                self.current_media_title = details_by_imdb.get('title') or details_by_imdb.get('name')
                 self._update_rpc()
             else:
-                # Fallback al nombre limpio extraído
-                m_id = self._save_basic(store_url, title_search, world, w_id, media_info)
-                self._session_url_map[url] = m_id  # registrar para re-detecciones intra-sesión
-                if forced_type:
-                    Multimedia.update(tipo_contenido=forced_type).where(Multimedia.id == m_id).execute()
-                self.timer.start(m_id, 120.0)
-                self.current_media_title = title_search
-                self._update_rpc()
+                if imdb_from_url:
+                    logging.info(
+                        "🔗 IMDb en URL (%s) sin resultado en TMDb → búsqueda por texto habitual",
+                        imdb_from_url,
+                    )
+
+                # Búsqueda TMDb con Inteligencia NLP
+                # Forzar tipo en la búsqueda si las reglas de oro lo detectaron
+                search_type = 'tv' if forced_type == 'Serie' else 'multi'
+
+                results = self.tmdb.search(tmdb_q, language=self._get_tmdb_lang(), year=media_info['year'], media_type=search_type)
+                if not results and media_info['year']:
+                    results = self.tmdb.search(tmdb_q, language=self._get_tmdb_lang(), media_type=search_type)
+
+                if results:
+                    best = results[0]
+                    # Si las reglas de oro dicen Serie pero TMDb dice Película (o viceversa), confiar en Reglas de Oro si es muy específico
+                    res_type = best.get('media_type', 'movie')
+                    if forced_type == 'Serie' and res_type == 'movie':
+                        # Re-buscar específicamente como TV (v4.7)
+                        tv_results = self.tmdb._call("GET", "search/tv", {'query': tmdb_q, 'language': self._get_tmdb_lang()})
+                        if tv_results and tv_results.get('results'):
+                            best = tv_results['results'][0]
+                            best['media_type'] = 'tv'
+
+                    details = self.tmdb.get_details(best.get('media_type', 'movie'), best['id'], language=self._get_tmdb_lang())
+                    m_id = self._save_media(store_url, details, world, w_id, media_info)
+                    self._session_url_map[url] = m_id  # registrar para re-detecciones intra-sesión
+                    runtime = details.get('runtime') or (details.get('episode_run_time', [0])[0] if details.get('episode_run_time') else 0)
+                    self.timer.start(m_id, float(runtime or 0))
+                    self.current_media_title = details.get('title') or details.get('name')
+                    self._update_rpc()
+                else:
+                    # Fallback al nombre limpio extraído
+                    m_id = self._save_basic(store_url, title_search, world, w_id, media_info)
+                    self._session_url_map[url] = m_id  # registrar para re-detecciones intra-sesión
+                    if forced_type:
+                        Multimedia.update(tipo_contenido=forced_type).where(Multimedia.id == m_id).execute()
+                    self.timer.start(m_id, 120.0)
+                    self.current_media_title = title_search
+                    self._update_rpc()
         except Exception as e:
             logging.error(f"💥 Error crítico en _handle_play: {e}")
 
