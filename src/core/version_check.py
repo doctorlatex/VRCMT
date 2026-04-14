@@ -22,7 +22,14 @@ def check_for_updates(callback, timeout=8, custom_url=None):
     def _run():
         try:
             import urllib.request
-            req = urllib.request.Request(url, headers={"User-Agent": "VRCMT-OTA/2.0"})
+            req = urllib.request.Request(
+                url,
+                headers={
+                    "User-Agent": "VRCMT-OTA/2.0",
+                    "Cache-Control": "no-cache",
+                    "Pragma": "no-cache",
+                },
+            )
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 if resp.status == 200:
                     remote = resp.read().decode("utf-8-sig", errors="ignore").strip()
