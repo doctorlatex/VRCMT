@@ -23,7 +23,10 @@ import threading
 import urllib.request
 from typing import Callable, Optional
 
-# URL del release latest en GitHub — siempre apunta al exe mas reciente
+# URL del release "latest" en GitHub — el asset DEBE llamarse exactamente VRCMT.exe
+# (si el release latest no incluye ese archivo → HTTP 404 al actualizar).
+# GitHub "latest" release — asset MUST be named exactly VRCMT.exe
+# (if latest release has no such asset → HTTP 404 on update).
 _RELEASE_DOWNLOAD_URL = (
     "https://github.com/doctorlatex/VRCMT/releases/latest/download/VRCMT.exe"
 )
