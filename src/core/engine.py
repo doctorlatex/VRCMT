@@ -2,6 +2,7 @@ import logging
 import threading
 import hashlib
 import os
+import sys
 import time
 import re
 import guessit
@@ -323,7 +324,30 @@ class VRCMTEngine:
 
         threading.Thread(target=_vrchat_exit_poll, daemon=True, name="VRCMT-VRChat-exit").start()
 
+        self.ensure_vrchat_companion_process()
+
+        # [ES] Ruta del .exe empaquetado para el companion (portable / renombre VRCMTv2.x.exe).
+        # [EN] Frozen exe path for companion (portable / renamed VRCMTv2.x.exe).
+        if getattr(sys, "frozen", False):
+            try:
+                _exe = os.path.normpath(os.path.abspath(sys.executable))
+                if os.path.isfile(_exe):
+                    self.config.save_config("vrcmt_last_executable_path", _exe)
+            except Exception as _pe:
+                logging.debug("vrcmt_last_executable_path: %s", _pe)
+
         logging.info(f"🚀 Motor VRCMT v{_APP_VERSION} iniciado. (API: {self.tmdb.api_key[:4]}... | Log: {os.path.basename(self.scanner.log_dir)})")
+
+    def ensure_vrchat_companion_process(self):
+        """Arranca el proceso companion si la opción está activa (Windows). / Start companion if enabled."""
+        try:
+            if not self.config.get_val("launch_vrcmt_with_vrchat", False):
+                return
+            from src.core.vrchat_companion import spawn_companion_if_needed
+
+            spawn_companion_if_needed()
+        except Exception as e:
+            logging.debug("ensure_vrchat_companion_process: %s", e)
 
     def _update_rpc(self):
         """Sincroniza el estado de Discord con el mundo y el contenido actual (v2.11.51)"""
@@ -692,6 +716,19 @@ class VRCMTEngine:
         try:
             url = event['url']
             confirmed_video = event.get('confirmed_video', False)
+
+            # --- MEJORA v2.0.14: APIs tipo u2b.cx/vrcurl → URL canónica de YouTube ---
+            # --- EN: Wrapper APIs like u2b.cx/vrcurl → canonical YouTube watch URL ---
+            try:
+                from src.core.stream_url_resolve import resolve_known_stream_api_urls
+
+                _raw_u = url
+                url = resolve_known_stream_api_urls(url)
+                if url != _raw_u:
+                    event['url'] = url
+                    confirmed_video = True
+            except Exception as _ru:
+                logging.debug("resolve_known_stream_api_urls: %s", _ru)
 
             # --- MEJORA v4.9: IMAGEN NATIVA (fuente autoritativa: etiqueta [Image Download] del log) ---
             # Si el scanner detectó la línea "[Image Download] Attempting to load image from URL",

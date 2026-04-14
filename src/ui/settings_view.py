@@ -277,6 +277,40 @@ class SettingsView(QWidget):
         log_row.addWidget(btn_browse)
         gen_l.addLayout(log_row)
 
+        self.chk_minimize_tray = QCheckBox(
+            self.engine.config.tr(
+                "chk_minimize_tray_on_close",
+                "Minimizar a la bandeja al cerrar la ventana / Minimize to tray when closing the window",
+            )
+        )
+        self.chk_minimize_tray.setChecked(bool(self.engine.config.get_val("minimize_to_tray_on_close", False)))
+        self.chk_minimize_tray.setToolTip(
+            self.engine.config.tr(
+                "tip_minimize_tray_on_close",
+                "Si está desactivado, cerrar la ventana cierra la aplicación por completo. "
+                "If disabled, closing the window fully exits the application.",
+            )
+        )
+        gen_l.addWidget(self.chk_minimize_tray)
+
+        self.chk_launch_vrcmt_vrchat = QCheckBox(
+            self.engine.config.tr(
+                "chk_launch_vrcmt_with_vrchat",
+                "Abrir VRCMT al iniciar VRChat / Open VRCMT when VRChat starts",
+            )
+        )
+        self.chk_launch_vrcmt_vrchat.setChecked(
+            bool(self.engine.config.get_val("launch_vrcmt_with_vrchat", False))
+        )
+        self.chk_launch_vrcmt_vrchat.setToolTip(
+            self.engine.config.tr(
+                "tip_chk_launch_vrcmt_with_vrchat",
+                "Proceso en segundo plano: al detectar VRChat abre VRCMT y aplica el stub de YouTube lo antes posible si lo tienes habilitado. "
+                "Background process: when VRChat is detected, starts VRCMT and applies the YouTube stub as early as possible if enabled.",
+            )
+        )
+        gen_l.addWidget(self.chk_launch_vrcmt_vrchat)
+
         # ── Botón guardar ────────────────────────────────────────────────────
         btn_save_gen = QPushButton(self.engine.config.tr('btn_save_settings', "💾 Guardar Configuración"))
         btn_save_gen.setMinimumHeight(42)
@@ -1087,6 +1121,14 @@ class SettingsView(QWidget):
         self.engine.config.save_config('language', self.current_app_lang)
         self.engine.config.save_config('tmdb_api_key', self.api_input.text().strip())
         self.engine.config.save_config('log_dir', self.log_input.text().strip())
+        self.engine.config.save_config(
+            'minimize_to_tray_on_close', bool(self.chk_minimize_tray.isChecked())
+        )
+        self.engine.config.save_config(
+            'launch_vrcmt_with_vrchat', bool(self.chk_launch_vrcmt_vrchat.isChecked())
+        )
+        if self.chk_launch_vrcmt_vrchat.isChecked():
+            self.engine.ensure_vrchat_companion_process()
         # P4: Guardar URL OTA si fue modificada / Save OTA URL if changed
         # ota_url eliminado de UI — la URL se gestiona internamente en version_check.py
         # ota_url removed from UI — URL is managed internally in version_check.py

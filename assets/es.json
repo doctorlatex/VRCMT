@@ -202,5 +202,16 @@
     "lbl_no_results": "No se encontraron coincidencias.",
 
     "msg_no_genres": "Aún no hay suficientes datos de géneros.",
-    "lbl_titles": "títulos"
+    "lbl_titles": "títulos",
+
+    "menu_tools": "Herramientas",
+    "act_launch_vrcmt_with_vrchat": "Abrir VRCMT al iniciar VRChat",
+    "tip_launch_vrcmt_with_vrchat": "Si está activo, un proceso en segundo plano detecta VRChat, aplica el stub de YouTube lo antes posible (si lo tienes habilitado) y abre VRCMT si la ventana principal no está abierta.",
+    "chk_minimize_tray_on_close": "Minimizar a la bandeja al cerrar la ventana",
+    "tip_minimize_tray_on_close": "Si está desactivado, cerrar la ventana cierra la aplicación por completo. Si está activado y la bandeja está disponible, la ventana se oculta y queda el icono en la bandeja.",
+    "chk_launch_vrcmt_with_vrchat": "Abrir VRCMT al iniciar VRChat",
+    "tip_chk_launch_vrcmt_with_vrchat": "Proceso en segundo plano: al detectar VRChat abre VRCMT y aplica el stub de YouTube lo antes posible si esa mejora está habilitada en configuración.",
+    "tray_show": "Mostrar",
+    "tray_exit": "Salir",
+    "tray_minimized": "Minimizado a la bandeja"
 }

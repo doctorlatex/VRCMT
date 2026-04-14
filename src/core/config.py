@@ -28,6 +28,15 @@ class ConfigManager:
             'vrchat_ytdlp_target_path': '',
             'vrchat_stub_github_token': '',
             'vrchat_stub_restore_on_exit': False,
+            # Cerrar ventana: minimizar a bandeja solo si está activado (si no, salida completa).
+            # Close window: minimize to tray only when enabled (otherwise full exit).
+            'minimize_to_tray_on_close': False,
+            # Proceso ligero que abre VRCMT cuando VRChat está en ejecución (Windows).
+            # Lightweight process that starts VRCMT when VRChat is running (Windows).
+            'launch_vrcmt_with_vrchat': False,
+            # Último .exe VRCMT conocido (solo frozen); el companion lo usa si el portable se movió.
+            # Last known VRCMT .exe (frozen only); companion uses it if the portable was moved.
+            'vrcmt_last_executable_path': '',
         }
         
         if os.path.exists(CONFIG_PATH):

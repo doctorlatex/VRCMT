@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, Q
                              QPushButton, QStackedWidget, QLabel, QLineEdit, QApplication,
                              QComboBox, QSystemTrayIcon, QMenu)
 from PySide6.QtCore import Qt, Slot, QObject, QEvent, QTimer
-from PySide6.QtGui import QShortcut, QKeySequence, QIcon
+from PySide6.QtGui import QAction, QShortcut, QKeySequence, QIcon
 from src.ui.catalog_view import CatalogView
 from src.ui.stats_view import StatsView
 from src.ui.settings_view import SettingsView
@@ -297,6 +297,11 @@ class MainWindow(QMainWindow):
     def setup_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
+        try:
+            self.menuBar().clear()
+        except Exception:
+            pass
+        self._setup_tools_menubar()
         main_layout = QHBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
@@ -783,6 +788,42 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logging.debug("show_toast: %s", e)
 
+    def _setup_tools_menubar(self):
+        """Menú Herramientas: opciones que también están en configuración. / Tools menu."""
+        try:
+            mb = self.menuBar()
+            tools_menu = mb.addMenu(
+                self.engine.config.tr("menu_tools", "Herramientas / Tools")
+            )
+            self._act_launch_vrcmt_with_vrchat = QAction(
+                self.engine.config.tr(
+                    "act_launch_vrcmt_with_vrchat",
+                    "Abrir VRCMT al iniciar VRChat / Open VRCMT when VRChat starts",
+                ),
+                self,
+            )
+            self._act_launch_vrcmt_with_vrchat.setCheckable(True)
+            self._act_launch_vrcmt_with_vrchat.setChecked(
+                bool(self.engine.config.get_val("launch_vrcmt_with_vrchat", False))
+            )
+            self._act_launch_vrcmt_with_vrchat.setToolTip(
+                self.engine.config.tr(
+                    "tip_launch_vrcmt_with_vrchat",
+                    "Si está activo, un proceso en segundo plano abre VRCMT cuando detecta VRChat "
+                    "(stub YouTube lo antes posible). / When enabled, a background process starts VRCMT when VRChat is detected (YouTube stub as early as possible).",
+                )
+            )
+            self._act_launch_vrcmt_with_vrchat.triggered.connect(self._on_menu_launch_vrcmt_with_vrchat)
+            tools_menu.addAction(self._act_launch_vrcmt_with_vrchat)
+        except Exception as e:
+            logging.debug("_setup_tools_menubar: %s", e)
+
+    def _on_menu_launch_vrcmt_with_vrchat(self):
+        checked = self._act_launch_vrcmt_with_vrchat.isChecked()
+        self.engine.config.save_config("launch_vrcmt_with_vrchat", checked)
+        if checked:
+            self.engine.ensure_vrchat_companion_process()
+
     # F5: Sistema tray ----------------------------------------------------------
     def _setup_system_tray(self):
         """Configura el icono de la bandeja del sistema / Sets up system tray icon."""
@@ -967,8 +1008,8 @@ class MainWindow(QMainWindow):
         # #endregion
 
     def closeEvent(self, event):
-        """Mejora v3.6.8 + F5: Si el tray está activo, minimizar; si no, salida forzada.
-        v3.6.8 + F5: Minimize to tray if available; otherwise force-quit."""
+        """v3.6.8 + F5 + opción config: minimizar a bandeja solo si minimize_to_tray_on_close.
+        v3.6.8 + F5 + config: minimize to tray only when minimize_to_tray_on_close is enabled."""
         # F5: Solo cerrar de verdad si se pidió explícitamente (desde tray o Ctrl+Q)
         tray_ok = (
             hasattr(self, '_tray')
@@ -976,7 +1017,8 @@ class MainWindow(QMainWindow):
             and shiboken.isValid(self._tray)
             and QSystemTrayIcon.isSystemTrayAvailable()
         )
-        if tray_ok and not self._force_quit_requested:
+        minimize_tray = bool(self.engine.config.get_val("minimize_to_tray_on_close", False))
+        if tray_ok and minimize_tray and not self._force_quit_requested:
             event.ignore()
             self.hide()
             self._tray.showMessage(
