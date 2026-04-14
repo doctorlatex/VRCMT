@@ -281,6 +281,39 @@ class VRCMTEngine:
                     _t.sleep(1)
         threading.Thread(target=_ota_loop, daemon=True, name="VRCMT-OTA-loop").start()
 
+        # Rich Presence: al cerrar VRChat.exe limpiar Discord (ya no hay actividad en VRChat).
+        self._vrchat_process_seen_running = False
+
+        def _vrchat_exit_poll():
+            import time as _t
+            from src.core.vrchat_process import is_vrchat_running
+            _t.sleep(4)  # dejar que arranque el motor y Discord RPC
+            while self.running:
+                try:
+                    running = is_vrchat_running()
+                    if running:
+                        was_running = self._vrchat_process_seen_running
+                        self._vrchat_process_seen_running = True
+                        if not was_running:
+                            # VRChat se abrió de nuevo: volver a mostrar estado en Discord
+                            try:
+                                self._update_rpc()
+                            except Exception:
+                                pass
+                    elif self._vrchat_process_seen_running:
+                        # Transición: VRChat estaba abierto y ahora no → limpiar presencia
+                        self.discord.clear_presence()
+                        self._vrchat_process_seen_running = False
+                        logging.info("🎮 VRChat cerrado → Discord Rich Presence limpiado")
+                except Exception as _e:
+                    logging.debug("vrchat exit poll: %s", _e)
+                for _ in range(3):
+                    if not self.running:
+                        break
+                    _t.sleep(1)
+
+        threading.Thread(target=_vrchat_exit_poll, daemon=True, name="VRCMT-VRChat-exit").start()
+
         logging.info(f"🚀 Motor VRCMT v{_APP_VERSION} iniciado. (API: {self.tmdb.api_key[:4]}... | Log: {os.path.basename(self.scanner.log_dir)})")
 
     def _update_rpc(self):
