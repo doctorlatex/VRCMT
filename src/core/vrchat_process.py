@@ -1,8 +1,18 @@
-"""Detección ligera del proceso VRChat.exe (solo Windows). / Lightweight VRChat.exe process detection (Windows only)."""
+"""Detección ligera del proceso VRChat.exe (solo Windows). / Lightweight VRChat.exe process detection (Windows only).
+
+Solo lectura del estado del sistema vía CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS):
+no abre el proceso de VRChat, no inyecta código, no escribe en su memoria ni modifica archivos
+del juego. Es el mismo tipo de enumeración que usan administradores de tareas ligeros.
+Read-only system snapshot: does not open/inject/write to VRChat or touch game files.
+"""
 from __future__ import annotations
 
 import logging
 import sys
+
+# Intervalo recomendado entre llamadas desde el motor (segundos). Evita sondeo agresivo.
+# Recommended minimum seconds between calls from the engine (avoids aggressive polling).
+MIN_POLL_INTERVAL_SECONDS = 6
 
 
 def is_vrchat_running() -> bool:

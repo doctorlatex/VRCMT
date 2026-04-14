@@ -282,14 +282,23 @@ class VRCMTEngine:
         threading.Thread(target=_ota_loop, daemon=True, name="VRCMT-OTA-loop").start()
 
         # Rich Presence: al cerrar VRChat.exe limpiar Discord (ya no hay actividad en VRChat).
+        # Sin Discord vinculado no se enumera la lista de procesos (ahorro de CPU).
+        # Enumeración solo-lectura (snapshot); no toca VRChat ni su instalación.
         self._vrchat_process_seen_running = False
 
         def _vrchat_exit_poll():
             import time as _t
-            from src.core.vrchat_process import is_vrchat_running
+            from src.core.vrchat_process import is_vrchat_running, MIN_POLL_INTERVAL_SECONDS
+            _POLL_NO_DISCORD_S = 45  # reintentar si el usuario vincula Discord sin reiniciar VRCMT
             _t.sleep(4)  # dejar que arranque el motor y Discord RPC
             while self.running:
                 try:
+                    if not self.discord.get_saved_id():
+                        for _ in range(_POLL_NO_DISCORD_S):
+                            if not self.running:
+                                break
+                            _t.sleep(1)
+                        continue
                     running = is_vrchat_running()
                     if running:
                         was_running = self._vrchat_process_seen_running
@@ -307,7 +316,7 @@ class VRCMTEngine:
                         logging.info("🎮 VRChat cerrado → Discord Rich Presence limpiado")
                 except Exception as _e:
                     logging.debug("vrchat exit poll: %s", _e)
-                for _ in range(3):
+                for _ in range(MIN_POLL_INTERVAL_SECONDS):
                     if not self.running:
                         break
                     _t.sleep(1)
