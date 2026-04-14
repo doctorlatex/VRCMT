@@ -204,13 +204,8 @@
     "msg_no_genres": "Not enough genre data yet.",
     "lbl_titles": "titles",
 
-    "menu_tools": "Tools",
-    "act_launch_vrcmt_with_vrchat": "Open VRCMT when VRChat starts",
-    "tip_launch_vrcmt_with_vrchat": "When enabled, a background process watches for VRChat, applies the YouTube stub as early as possible (if enabled in settings), and launches VRCMT if the main window is not already running.",
     "chk_minimize_tray_on_close": "Minimize to tray when closing the window",
     "tip_minimize_tray_on_close": "When disabled, closing the window fully exits the application. When enabled and the system tray is available, the window hides and a tray icon remains.",
-    "chk_launch_vrcmt_with_vrchat": "Open VRCMT when VRChat starts",
-    "tip_chk_launch_vrcmt_with_vrchat": "Background process: when VRChat is detected, starts VRCMT and applies the YouTube stub as early as possible if that improvement is enabled in settings.",
     "tray_show": "Show",
     "tray_exit": "Exit",
     "tray_minimized": "Minimized to tray"

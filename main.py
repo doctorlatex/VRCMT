@@ -1,14 +1,6 @@
 import sys
 import os
 
-# --- MEJORA: proceso companion VRChat (--vrchat-companion) sin Qt ni mutex de instancia única.
-# --- EN: VRChat companion process; no Qt, no main single-instance mutex.
-if "--vrchat-companion" in sys.argv:
-    from src.core.vrchat_companion import run_companion_loop
-
-    run_companion_loop()
-    raise SystemExit(0)
-
 import logging
 import ctypes
 import faulthandler
